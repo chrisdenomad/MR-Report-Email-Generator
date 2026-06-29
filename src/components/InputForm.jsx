@@ -47,6 +47,7 @@ function Section({ id, title, children, isOpen, onToggle }) {
 }
 
 export default function InputForm({
+  style,
   form,
   columns,
   summaryRows,
@@ -84,7 +85,7 @@ export default function InputForm({
   const progress = useProgress(form, summaryRows, columns, insights)
 
   return (
-    <div className="form-panel">
+    <div className="form-panel" style={style}>
       {/* B2: Progress bar */}
       <div className="progress-bar-container">
         <div className="progress-bar-track">

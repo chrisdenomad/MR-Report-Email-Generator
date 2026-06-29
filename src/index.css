@@ -87,6 +87,58 @@ body {
   overflow: hidden;
 }
 
+/* Disable text selection while dragging */
+.app-body.is-dragging {
+  user-select: none;
+  cursor: col-resize;
+}
+
+/* ── Panel Divider (drag handle) ── */
+.panel-divider {
+  width: 6px;
+  flex-shrink: 0;
+  background: var(--border-color);
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  position: relative;
+  z-index: 20;
+}
+
+.panel-divider:hover,
+.panel-divider.active {
+  background: var(--epam-green);
+}
+
+/* Grip dots in the centre of the divider */
+.panel-divider-grip {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  pointer-events: none;
+}
+
+.panel-divider-grip::before,
+.panel-divider-grip::after {
+  content: '';
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  display: block;
+  box-shadow: 0 5px 0 var(--text-secondary), 0 10px 0 var(--text-secondary);
+}
+
+.panel-divider:hover .panel-divider-grip::before,
+.panel-divider:hover .panel-divider-grip::after,
+.panel-divider.active .panel-divider-grip::before,
+.panel-divider.active .panel-divider-grip::after {
+  background: #fff;
+  box-shadow: 0 5px 0 #fff, 0 10px 0 #fff;
+}
+
 /* ── Progress Bar ── */
 .progress-bar-container {
   background: var(--bg-card);
@@ -128,10 +180,10 @@ body {
 
 /* ── Form Panel ── */
 .form-panel {
-  width: 46%;
-  min-width: 360px;
+  /* width is now controlled by App.jsx via inline style */
+  min-width: 240px;
   background: var(--bg-secondary);
-  border-right: 1px solid var(--border-color);
+  border-right: none; /* divider replaces this border */
   display: flex;
   flex-direction: column;
   overflow: hidden;

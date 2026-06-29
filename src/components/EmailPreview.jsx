@@ -178,6 +178,14 @@ export default function EmailPreview({
               </li>
             </ul>
 
+            {/* Recommendations */}
+            <p className="ep-section-heading">Recommendations</p>
+            {form.recommendations ? (
+              <p className="ep-recommendations">{form.recommendations}</p>
+            ) : (
+              <p className="ep-empty">[Add recommendations]</p>
+            )}
+
             {/* Important Remarks */}
             <p className="ep-section-heading">Important Remarks</p>
             <ul className="ep-bullet-list">
@@ -196,14 +204,6 @@ export default function EmailPreview({
                 Figures represent market estimates, not exact headcounts or hiring guarantees.
               </li>
             </ul>
-
-            {/* Recommendations */}
-            <p className="ep-section-heading">Recommendations</p>
-            {form.recommendations ? (
-              <p className="ep-recommendations">{form.recommendations}</p>
-            ) : (
-              <p className="ep-empty">[Add recommendations]</p>
-            )}
 
           </div>
         </div>

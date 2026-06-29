@@ -1,7 +1,12 @@
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useFormState } from './hooks/useFormState'
 import InputForm from './components/InputForm'
 import EmailPreview from './components/EmailPreview'
 import './index.css'
+
+const MIN_PCT = 20   // minimum panel width in percent
+const MAX_PCT = 80   // maximum panel width in percent
+const DEFAULT_PCT = 46
 
 export default function App() {
   const {
@@ -29,6 +34,55 @@ export default function App() {
     resetForm,
   } = useFormState()
 
+  const [splitPct, setSplitPct] = useState(DEFAULT_PCT)
+  const [isDragging, setIsDragging] = useState(false)
+  const bodyRef = useRef(null)
+
+  const onMouseDown = useCallback((e) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }, [])
+
+  const onMouseMove = useCallback((e) => {
+    if (!isDragging || !bodyRef.current) return
+    const rect = bodyRef.current.getBoundingClientRect()
+    const rawPct = ((e.clientX - rect.left) / rect.width) * 100
+    setSplitPct(Math.min(MAX_PCT, Math.max(MIN_PCT, rawPct)))
+  }, [isDragging])
+
+  const onMouseUp = useCallback(() => {
+    setIsDragging(false)
+  }, [])
+
+  // Touch support
+  const onTouchMove = useCallback((e) => {
+    if (!isDragging || !bodyRef.current) return
+    const touch = e.touches[0]
+    const rect = bodyRef.current.getBoundingClientRect()
+    const rawPct = ((touch.clientX - rect.left) / rect.width) * 100
+    setSplitPct(Math.min(MAX_PCT, Math.max(MIN_PCT, rawPct)))
+  }, [isDragging])
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', onMouseMove)
+      window.addEventListener('mouseup', onMouseUp)
+      window.addEventListener('touchmove', onTouchMove)
+      window.addEventListener('touchend', onMouseUp)
+    }
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+      window.removeEventListener('touchmove', onTouchMove)
+      window.removeEventListener('touchend', onMouseUp)
+    }
+  }, [isDragging, onMouseMove, onMouseUp, onTouchMove])
+
+  // Double-click to reset to default split
+  const onDoubleClick = useCallback(() => {
+    setSplitPct(DEFAULT_PCT)
+  }, [])
+
   return (
     <div className="app-wrapper">
       <header className="app-header">
@@ -38,9 +92,13 @@ export default function App() {
         </h1>
       </header>
 
-      <div className="app-body">
-        {/* InputForm owns its .form-panel wrapper */}
+      <div
+        className={`app-body${isDragging ? ' is-dragging' : ''}`}
+        ref={bodyRef}
+      >
+        {/* InputForm owns its .form-panel wrapper; width driven by splitPct */}
         <InputForm
+          style={{ width: `${splitPct}%` }}
           form={form}
           columns={columns}
           summaryRows={summaryRows}
@@ -64,7 +122,21 @@ export default function App() {
           resetForm={resetForm}
         />
 
-        {/* EmailPreview owns its .preview-panel wrapper */}
+        {/* Drag handle */}
+        <div
+          className={`panel-divider${isDragging ? ' active' : ''}`}
+          onMouseDown={onMouseDown}
+          onTouchStart={onMouseDown}
+          onDoubleClick={onDoubleClick}
+          title="Drag to resize · Double-click to reset"
+          role="separator"
+          aria-label="Resize panels"
+          aria-orientation="vertical"
+        >
+          <div className="panel-divider-grip" />
+        </div>
+
+        {/* EmailPreview owns its .preview-panel wrapper; takes remaining space */}
         <EmailPreview
           form={form}
           columns={columns}
