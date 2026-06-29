@@ -34,7 +34,7 @@ body {
   color: var(--text-primary);
   font-size: 14px;
   line-height: 1.5;
-  /* A3: Firefox scrollbar */
+  /* Fix #A3: Firefox scrollbar */
   scrollbar-color: var(--border-color) var(--bg-secondary);
   scrollbar-width: thin;
 }
@@ -139,13 +139,14 @@ body {
   position: relative;
 }
 
+/* Fix #11: Increase padding-bottom so Reset button clears the 40px fade overlay */
 .form-panel-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 24px 32px;
+  padding: 20px 24px 56px;
 }
 
-/* A7: Bottom fade hint when content overflows */
+/* Fix #A7: Bottom fade hint. NOTE: z-index:5 — any dropdowns inside must use z-index > 5 */
 .form-panel::after {
   content: '';
   position: absolute;
@@ -159,8 +160,10 @@ body {
 }
 
 /* ── Preview Panel ── */
+/* Fix #30: min-height:0 ensures sticky works correctly inside flex child in all browsers */
 .preview-panel {
   flex: 1;
+  min-height: 0;
   background: var(--bg-primary);
   overflow-y: auto;
   display: flex;
@@ -194,24 +197,28 @@ body {
 }
 
 /* ── Form Sections ── */
-/* A4: More breathing room between sections */
+/* Fix #12: Increased gap so sections don't visually merge */
 .form-section {
-  margin-bottom: 6px;
+  margin-bottom: 10px;
   border: 1px solid var(--border-color);
   border-radius: 8px;
   overflow: hidden;
   background: var(--bg-panel);
 }
 
-/* B1: Collapsible section header */
+/* Fix #21: section header is now a <button> — reset button defaults */
 .form-section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
   padding: 10px 14px;
   cursor: pointer;
   user-select: none;
   background: var(--bg-card);
+  border: none;
+  border-radius: 0;
+  text-align: left;
   transition: background 0.15s;
   gap: 8px;
 }
@@ -231,24 +238,22 @@ body {
 .form-section-chevron {
   color: var(--text-secondary);
   font-size: 11px;
-  transition: transform 0.2s ease;
   flex-shrink: 0;
+  transition: transform 0.2s ease;
+  display: inline-block;
 }
 
-.form-section-chevron.open {
-  transform: rotate(180deg);
-}
-
-/* B1: Collapsible body */
+/* Fix #13: Better cubic-bezier for open/close; higher max-height cap for large tables */
 .form-section-body {
   overflow: hidden;
   max-height: 0;
-  transition: max-height 0.28s ease, padding 0.2s ease;
+  transition: max-height 0.35s cubic-bezier(0, 1, 0, 1), padding 0.2s ease;
   padding: 0 14px;
 }
 
 .form-section-body.open {
-  max-height: 1200px;
+  max-height: 4000px;
+  transition: max-height 0.45s cubic-bezier(1, 0, 1, 0), padding 0.2s ease;
   padding: 14px 14px 16px;
 }
 
@@ -263,6 +268,11 @@ body {
   flex-direction: column;
   gap: 5px;
   flex: 1;
+}
+
+/* Fix #24: utility class to add bottom margin to a form-group */
+.form-group.mb-10 {
+  margin-bottom: 10px;
 }
 
 .form-group label {
@@ -307,7 +317,7 @@ body {
   background: var(--bg-input);
 }
 
-/* A8: Synced badge */
+/* Fix #A8: Synced badge */
 .synced-badge {
   display: inline-flex;
   align-items: center;
@@ -329,6 +339,11 @@ body {
 }
 
 /* ── Research Summary Table ── */
+/* Fix #28: shared table overflow wrapper */
+.table-scroll-wrapper {
+  overflow-x: auto;
+}
+
 .summary-table {
   width: 100%;
   border-collapse: collapse;
@@ -413,7 +428,12 @@ body {
   border-color: var(--epam-green);
 }
 
-/* A6: Column remove button — hidden until header row hovered */
+/* Fix #25: top margin for Add Insight button via adjacent sibling */
+.insights-add-btn {
+  margin-top: 8px;
+}
+
+/* Fix #A6: Column remove button — hidden by default, reveal on th hover */
 .th-editable {
   display: flex;
   align-items: center;
@@ -533,7 +553,7 @@ body {
   color: #666;
 }
 
-/* A8: Sync reset button */
+/* Sync reset button */
 .btn-sync-reset {
   background: none;
   border: none;
@@ -565,11 +585,18 @@ body {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
+  transition: background 0.2s, transform 0.1s, opacity 0.2s;
   white-space: nowrap;
 }
 
 .btn-copy:active { transform: scale(0.97); }
+
+/* Fix #14: disabled state for copy buttons */
+.btn-copy:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 
 .btn-copy-plain {
   background: var(--bg-card);
@@ -589,7 +616,7 @@ body {
 
 .btn-copy-html:hover { background: var(--epam-green-light); }
 
-/* A1: Reset button as proper CSS class */
+/* Fix #A1: Reset button as proper CSS class */
 .btn-reset {
   background: transparent;
   border: 1px solid #555;
@@ -607,13 +634,24 @@ body {
   color: var(--danger);
 }
 
+/* Fix #29: disabled state for reset button */
+.btn-reset:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Fix #26: reset button container */
+.btn-reset-container {
+  padding: 14px 0 8px;
+}
+
 .copy-actions {
   display: flex;
   gap: 8px;
   align-items: center;
 }
 
-/* A5: Toast fade animation */
+/* Fix #A5: Toast fade animation */
 @keyframes toastFade {
   0%   { opacity: 0; transform: translateY(4px); }
   15%  { opacity: 1; transform: translateY(0); }
@@ -670,7 +708,13 @@ body {
   font-size: 14px;
 }
 
-/* A2: Better contrast heading color on white background */
+/* Fix #27: ep-intro replaces inline style on intro paragraph */
+.ep-intro {
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+/* Fix #A2: Better contrast on white background */
 .ep-section-heading {
   font-weight: 700;
   font-size: 13px;
@@ -726,7 +770,15 @@ body {
   margin-bottom: 3px;
 }
 
+/* Fix #15: split ep-empty for spans/paragraphs vs table cells */
 .ep-empty {
+  color: #aaa;
+  font-style: italic;
+  font-size: 13px;
+}
+
+td.ep-empty {
+  text-align: center;
   color: #aaa;
   font-style: italic;
   font-size: 13px;
@@ -737,7 +789,7 @@ body {
   white-space: pre-wrap;
 }
 
-/* B4: Empty state */
+/* ── B4: Empty state ── */
 .preview-empty-state {
   flex: 1;
   display: flex;

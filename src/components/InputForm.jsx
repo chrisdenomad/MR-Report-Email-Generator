@@ -7,22 +7,43 @@ const ALL_SECTIONS = ['header', 'summary', 'interpretation', 'insights', 'method
 function useProgress(form, summaryRows, columns, insights) {
   return useMemo(() => {
     const filled = [
-      // Header
       !!(form.role || form.location || form.recipientName),
-      // Research Summary
       summaryRows.some(row => columns.some(col => row.values[col.id]?.trim())),
-      // Interpretation
       !!form.interpretation.trim(),
-      // Key Insights
       insights.some(i => i.text.trim()),
-      // Search Methodology
+      // Note: role/location auto-fill from header, so only count unique fields
       !!(form.totalYearsExperience || form.coreSkills),
-      // Recommendations
       !!form.recommendations.trim(),
     ]
     const count = filled.filter(Boolean).length
     return { count, total: filled.length, pct: Math.round((count / filled.length) * 100) }
   }, [form, summaryRows, columns, insights])
+}
+
+// Fix #1 + #21: Section lifted to module scope; uses <button> for keyboard accessibility
+function Section({ id, title, children, isOpen, onToggle }) {
+  const open = isOpen(id)
+  return (
+    <div className="form-section">
+      <button
+        type="button"
+        className="form-section-header"
+        onClick={() => onToggle(id)}
+        aria-expanded={open}
+        aria-controls={`section-body-${id}`}
+      >
+        <span className="form-section-title">{title}</span>
+        <span className="form-section-chevron" aria-hidden="true"
+          style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+      </button>
+      <div
+        id={`section-body-${id}`}
+        className={`form-section-body${open ? ' open' : ''}`}
+      >
+        {children}
+      </div>
+    </div>
+  )
 }
 
 export default function InputForm({
@@ -48,7 +69,6 @@ export default function InputForm({
   resetMethodologyLocation,
   resetForm,
 }) {
-  // B1: Collapsible — all open by default
   const [openSections, setOpenSections] = useState(new Set(ALL_SECTIONS))
 
   function toggleSection(id) {
@@ -61,24 +81,7 @@ export default function InputForm({
 
   function isOpen(id) { return openSections.has(id) }
 
-  // B2: Progress
   const progress = useProgress(form, summaryRows, columns, insights)
-
-  // Helper: render a collapsible section
-  function Section({ id, title, children }) {
-    const open = isOpen(id)
-    return (
-      <div className="form-section">
-        <div className="form-section-header" onClick={() => toggleSection(id)}>
-          <span className="form-section-title">{title}</span>
-          <span className={`form-section-chevron${open ? ' open' : ''}`}>▼</span>
-        </div>
-        <div className={`form-section-body${open ? ' open' : ''}`}>
-          {children}
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="form-panel">
@@ -95,10 +98,11 @@ export default function InputForm({
       <div className="form-panel-scroll">
 
         {/* ── Header ── */}
-        <Section id="header" title="Header">
-          <div className="form-group" style={{ marginBottom: '10px' }}>
-            <label>Recipient Name</label>
+        <Section id="header" title="Header" isOpen={isOpen} onToggle={toggleSection}>
+          <div className="form-group mb-10">
+            <label htmlFor="field-recipientName">Recipient Name</label>
             <input
+              id="field-recipientName"
               type="text"
               value={form.recipientName}
               placeholder="e.g. Sarah"
@@ -107,8 +111,9 @@ export default function InputForm({
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>Role (A)</label>
+              <label htmlFor="field-role">Role (A)</label>
               <input
+                id="field-role"
                 type="text"
                 value={form.role}
                 placeholder="e.g. Java Developer"
@@ -116,8 +121,9 @@ export default function InputForm({
               />
             </div>
             <div className="form-group">
-              <label>Location (B)</label>
+              <label htmlFor="field-location">Location (B)</label>
               <input
+                id="field-location"
                 type="text"
                 value={form.location}
                 placeholder="e.g. Poland"
@@ -128,7 +134,7 @@ export default function InputForm({
         </Section>
 
         {/* ── Research Summary ── */}
-        <Section id="summary" title="Research Summary">
+        <Section id="summary" title="Research Summary" isOpen={isOpen} onToggle={toggleSection}>
           <ResearchSummaryTable
             columns={columns}
             rows={summaryRows}
@@ -142,10 +148,11 @@ export default function InputForm({
         </Section>
 
         {/* ── Interpretation ── */}
-        <Section id="interpretation" title="Interpretation">
+        <Section id="interpretation" title="Interpretation" isOpen={isOpen} onToggle={toggleSection}>
           <div className="form-group">
-            <label>Interpretation sentence</label>
+            <label htmlFor="field-interpretation">Interpretation sentence</label>
             <textarea
+              id="field-interpretation"
               rows={3}
               value={form.interpretation}
               placeholder='e.g. "The market shows strong Senior-level depth, with moderate scarcity at Architect level."'
@@ -155,14 +162,16 @@ export default function InputForm({
         </Section>
 
         {/* ── Key Insights ── */}
-        <Section id="insights" title="Key Insights">
+        <Section id="insights" title="Key Insights" isOpen={isOpen} onToggle={toggleSection}>
           <div className="insights-list">
             {insights.map((item, index) => (
               <div key={item.id} className="insight-row">
-                <span className="insight-bullet">•</span>
+                <span className="insight-bullet" aria-hidden="true">•</span>
                 <input
                   type="text"
                   className="insight-input"
+                  id={`field-insight-${item.id}`}
+                  aria-label={`Key insight ${index + 1}`}
                   value={item.text}
                   placeholder={`Insight ${index + 1}`}
                   onChange={e => updateInsight(item.id, e.target.value)}
@@ -170,6 +179,7 @@ export default function InputForm({
                 <button
                   className="btn-remove-row"
                   onClick={() => removeInsight(item.id)}
+                  aria-label={`Remove insight ${index + 1}`}
                   title="Remove insight"
                   disabled={insights.length === 1}
                 >
@@ -178,17 +188,16 @@ export default function InputForm({
               </div>
             ))}
           </div>
-          <button className="btn-add-row" style={{ marginTop: '8px' }} onClick={addInsight}>
+          <button className="btn-add-row insights-add-btn" onClick={addInsight}>
             + Add Insight
           </button>
         </Section>
 
         {/* ── Search Methodology ── */}
-        <Section id="methodology" title="Search Methodology">
-          <div className="form-row" style={{ marginBottom: '10px' }}>
-            {/* Role — synced from header */}
+        <Section id="methodology" title="Search Methodology" isOpen={isOpen} onToggle={toggleSection}>
+          <div className="form-row">
             <div className="form-group">
-              <label>
+              <label htmlFor="field-methodologyRole">
                 Role
                 {form.methodologyRoleOverridden
                   ? <button className="btn-sync-reset" onClick={resetMethodologyRole} title="Reset to header value">↺ sync</button>
@@ -196,15 +205,15 @@ export default function InputForm({
                 }
               </label>
               <input
+                id="field-methodologyRole"
                 type="text"
                 value={effectiveMethodologyRole}
-                placeholder={form.role || 'Auto-filled from header'}
+                placeholder={form.role || 'Auto-filled from Role field'}
                 onChange={e => overrideMethodologyRole(e.target.value)}
               />
             </div>
-            {/* Location — synced from header, editable for city/region */}
             <div className="form-group">
-              <label>
+              <label htmlFor="field-methodologyLocation">
                 Location
                 {form.methodologyLocationOverridden
                   ? <button className="btn-sync-reset" onClick={resetMethodologyLocation} title="Reset to header value">↺ sync</button>
@@ -212,17 +221,19 @@ export default function InputForm({
                 }
               </label>
               <input
+                id="field-methodologyLocation"
                 type="text"
                 value={effectiveMethodologyLocation}
-                placeholder={form.location || 'Auto-filled from header'}
+                placeholder={form.location || 'Auto-filled from Location field'}
                 onChange={e => overrideMethodologyLocation(e.target.value)}
               />
             </div>
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label>Total Years of Experience</label>
+              <label htmlFor="field-experience">Total Years of Experience</label>
               <input
+                id="field-experience"
                 type="text"
                 value={form.totalYearsExperience}
                 placeholder="e.g. 5+ years"
@@ -231,8 +242,9 @@ export default function InputForm({
             </div>
           </div>
           <div className="form-group">
-            <label>Core Skills / Keywords</label>
+            <label htmlFor="field-coreSkills">Core Skills / Keywords</label>
             <input
+              id="field-coreSkills"
               type="text"
               value={form.coreSkills}
               placeholder="e.g. Java, Spring Boot, Microservices"
@@ -242,10 +254,11 @@ export default function InputForm({
         </Section>
 
         {/* ── Recommendations ── */}
-        <Section id="recommendations" title="Recommendations">
+        <Section id="recommendations" title="Recommendations" isOpen={isOpen} onToggle={toggleSection}>
           <div className="form-group">
-            <label>Recommendations</label>
+            <label htmlFor="field-recommendations">Recommendations</label>
             <textarea
+              id="field-recommendations"
               rows={5}
               value={form.recommendations}
               placeholder="Enter your recommendations for the hiring manager..."
@@ -254,8 +267,8 @@ export default function InputForm({
           </div>
         </Section>
 
-        {/* A1: Reset button with proper CSS class */}
-        <div style={{ paddingTop: '14px', paddingBottom: '8px' }}>
+        {/* Reset */}
+        <div className="btn-reset-container">
           <button className="btn-reset" onClick={resetForm}>
             Reset Form
           </button>

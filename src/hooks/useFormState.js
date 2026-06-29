@@ -34,12 +34,10 @@ const defaultForm = {
   role: '',
   location: '',
   interpretation: '',
-  // Methodology overrides
   methodologyRole: '',
   methodologyRoleOverridden: false,
   methodologyLocation: '',
   methodologyLocationOverridden: false,
-  // Rest
   totalYearsExperience: '',
   coreSkills: '',
   recommendations: '',
@@ -75,8 +73,15 @@ export function useFormState() {
     )
   }
 
+  // Fix #4: Use current columns snapshot (not stale closure)
   function addSummaryRow() {
-    setSummaryRows(prev => [...prev, makeEmptyRow(nextRowId, columns)])
+    setSummaryRows(prev => {
+      // derive current column ids from the prev row shape to avoid stale closure
+      const colIds = Object.keys(prev[0]?.values ?? {})
+      const values = {}
+      colIds.forEach(id => { values[id] = '' })
+      return [...prev, { id: nextRowId, values }]
+    })
     setNextRowId(n => n + 1)
   }
 
@@ -132,8 +137,13 @@ export function useFormState() {
   }
 
   // ── Methodology overrides ──
+  // Fix #7: Auto-clear override flag when field is emptied
   function overrideMethodologyRole(value) {
-    setForm(prev => ({ ...prev, methodologyRole: value, methodologyRoleOverridden: true }))
+    setForm(prev => ({
+      ...prev,
+      methodologyRole: value,
+      methodologyRoleOverridden: value.trim() !== '',
+    }))
   }
 
   function resetMethodologyRole() {
@@ -141,7 +151,11 @@ export function useFormState() {
   }
 
   function overrideMethodologyLocation(value) {
-    setForm(prev => ({ ...prev, methodologyLocation: value, methodologyLocationOverridden: true }))
+    setForm(prev => ({
+      ...prev,
+      methodologyLocation: value,
+      methodologyLocationOverridden: value.trim() !== '',
+    }))
   }
 
   function resetMethodologyLocation() {
@@ -149,17 +163,19 @@ export function useFormState() {
   }
 
   // ── Reset ──
+  // Fix #3: Deep-clone defaults to avoid shared object reference mutations
   function resetForm() {
-    setForm(defaultForm)
-    setColumns(defaultColumns)
-    setSummaryRows(defaultSummaryRows)
+    setForm({ ...defaultForm })
+    setColumns(defaultColumns.map(c => ({ ...c })))
+    setSummaryRows(defaultSummaryRows.map(r => ({ ...r, values: { ...r.values } })))
     setNextRowId(defaultSummaryRows.length + 1)
     setNextColId(defaultColumns.length + 1)
-    setInsights(defaultInsights)
+    setInsights(defaultInsights.map(i => ({ ...i })))
     setNextInsightId(defaultInsights.length + 1)
   }
 
   // ── Computed values ──
+  // subject is a convenience derivation — keep in sync with role/location formatting
   const subject = `Market Capacity Report – ${form.role || '[Role]'} in ${form.location || '[Location]'}`
   const effectiveMethodologyRole = form.methodologyRoleOverridden ? form.methodologyRole : form.role
   const effectiveMethodologyLocation = form.methodologyLocationOverridden ? form.methodologyLocation : form.location

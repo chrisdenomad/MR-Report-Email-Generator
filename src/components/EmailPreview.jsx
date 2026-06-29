@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { generatePlainText, generateHTML } from '../utils/generateEmail'
 
+// Fix #31: EmailPreview owns its own .preview-panel wrapper (symmetric with InputForm)
 // B4: Detect if the form is essentially empty
 function isFormEmpty(form, summaryRows, columns, insights) {
   const noHeader = !form.role && !form.location && !form.recipientName
@@ -22,9 +23,12 @@ export default function EmailPreview({
   effectiveMethodologyLocation,
 }) {
   const [toast, setToast] = useState('')
+  // Fix #5: counter key so same message re-triggers animation
+  const [toastKey, setToastKey] = useState(0)
 
   function showToast(msg) {
     setToast(msg)
+    setToastKey(k => k + 1)
     setTimeout(() => setToast(''), 2200)
   }
 
@@ -49,21 +53,24 @@ export default function EmailPreview({
   const empty = isFormEmpty(form, summaryRows, columns, insights)
 
   return (
-    <>
+    // Fix #31: owns its own .preview-panel wrapper
+    <div className="preview-panel">
       {/* Sticky header with copy buttons */}
       <div className="preview-panel-header">
         <h2>Email Preview</h2>
         <div className="copy-actions">
-          {toast && <span key={toast} className="copy-toast">{toast}</span>}
+          {/* Fix #5: toastKey guarantees remount even with same message */}
+          {toast && <span key={toastKey} className="copy-toast">{toast}</span>}
           <button className="btn-copy btn-copy-plain" onClick={copyPlainText} disabled={empty}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            {/* Fix #22: aria-hidden on decorative SVGs */}
+            <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
             </svg>
             Copy Plain Text
           </button>
           <button className="btn-copy btn-copy-html" onClick={copyHTML} disabled={empty}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="16 18 22 12 16 6"></polyline>
               <polyline points="8 6 2 12 8 18"></polyline>
             </svg>
@@ -95,14 +102,16 @@ export default function EmailPreview({
             <p className="ep-greeting">
               Hi{recipientName ? ` ${recipientName}` : ''},
             </p>
-            <p style={{ marginBottom: '16px', fontSize: '14px' }}>
+            {/* Fix #27: use ep-intro class instead of inline style */}
+            <p className="ep-intro">
               I would like to share with you the market capacity research for{' '}
               <strong>{role}</strong> in <strong>{location}</strong>.
             </p>
 
             {/* Research Summary */}
             <p className="ep-section-heading">Research Summary</p>
-            <div style={{ overflowX: 'auto' }}>
+            {/* Fix #28: shared table-scroll-wrapper class */}
+            <div className="table-scroll-wrapper">
               <table className="ep-table">
                 <thead>
                   <tr>
@@ -122,6 +131,7 @@ export default function EmailPreview({
                     ))
                   ) : (
                     <tr>
+                      {/* Fix #15: td.ep-empty gets text-align:center via CSS */}
                       <td colSpan={columns.length} className="ep-empty">
                         No data entered yet
                       </td>
@@ -171,10 +181,12 @@ export default function EmailPreview({
             {/* Important Remarks */}
             <p className="ep-section-heading">Important Remarks</p>
             <ul className="ep-bullet-list">
+              {/* Fix #9: "This dataset is based solely on..." */}
               <li>
-                This dataset based solely on LinkedIn database (not all professionals maintain updated
-                profiles) which align to search criteria, actual availability and expertise require
-                screening and direct engagement to identify the suitable candidates for the position.
+                This dataset is based solely on LinkedIn database (not all professionals maintain
+                updated profiles) which align to search criteria, actual availability and expertise
+                require screening and direct engagement to identify the suitable candidates for the
+                position.
               </li>
               <li>
                 Results may include from NHA companies and restricted countries, in line with EPAM
@@ -196,6 +208,6 @@ export default function EmailPreview({
           </div>
         </div>
       )}
-    </>
+    </div>
   )
 }

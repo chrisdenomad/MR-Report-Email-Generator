@@ -63,7 +63,7 @@ export function generatePlainText(form, columns, summaryRows, insights, subject,
     '──────────────────────────────────────',
     'IMPORTANT REMARKS',
     '──────────────────────────────────────',
-    '• This dataset based solely on LinkedIn database (not all professionals maintain updated profiles) which align to search criteria, actual availability and expertise require screening and direct engagement to identify the suitable candidates for the position.',
+    '• This dataset is based solely on LinkedIn database (not all professionals maintain updated profiles) which align to search criteria, actual availability and expertise require screening and direct engagement to identify the suitable candidates for the position.',
     '• Results may include from NHA companies and restricted countries, in line with EPAM policies for external hiring intelligence.',
     '• Figures represent market estimates, not exact headcounts or hiring guarantees.',
     '',
@@ -155,7 +155,7 @@ ${interpretationHtml}
 
 <p style="${sectionHeadingStyle}">Important Remarks</p>
 <ul style="padding-left:20px;margin:4px 0 10px 0;">
-  <li style="${bulletStyle}">This dataset based solely on LinkedIn database (not all professionals maintain updated profiles) which align to search criteria, actual availability and expertise require screening and direct engagement to identify the suitable candidates for the position.</li>
+  <li style="${bulletStyle}">This dataset is based solely on LinkedIn database (not all professionals maintain updated profiles) which align to search criteria, actual availability and expertise require screening and direct engagement to identify the suitable candidates for the position.</li>
   <li style="${bulletStyle}">Results may include from NHA companies and restricted countries, in line with EPAM policies for external hiring intelligence.</li>
   <li style="${bulletStyle}">Figures represent market estimates, not exact headcounts or hiring guarantees.</li>
 </ul>

@@ -39,7 +39,7 @@ export default function App() {
       </header>
 
       <div className="app-body">
-        {/* Left — InputForm owns its own .form-panel wrapper */}
+        {/* InputForm owns its .form-panel wrapper */}
         <InputForm
           form={form}
           columns={columns}
@@ -64,18 +64,16 @@ export default function App() {
           resetForm={resetForm}
         />
 
-        {/* Right — Email Preview */}
-        <div className="preview-panel">
-          <EmailPreview
-            form={form}
-            columns={columns}
-            summaryRows={summaryRows}
-            insights={insights}
-            subject={subject}
-            effectiveMethodologyRole={effectiveMethodologyRole}
-            effectiveMethodologyLocation={effectiveMethodologyLocation}
-          />
-        </div>
+        {/* EmailPreview owns its .preview-panel wrapper */}
+        <EmailPreview
+          form={form}
+          columns={columns}
+          summaryRows={summaryRows}
+          insights={insights}
+          subject={subject}
+          effectiveMethodologyRole={effectiveMethodologyRole}
+          effectiveMethodologyLocation={effectiveMethodologyLocation}
+        />
       </div>
     </div>
   )
