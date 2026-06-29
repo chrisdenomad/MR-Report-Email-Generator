@@ -34,14 +34,18 @@ body {
   color: var(--text-primary);
   font-size: 14px;
   line-height: 1.5;
+  /* A3: Firefox scrollbar */
+  scrollbar-color: var(--border-color) var(--bg-secondary);
+  scrollbar-width: thin;
 }
 
+/* WebKit scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg-secondary); }
 ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--epam-green-dark); }
 
-/* Layout */
+/* ── Layout ── */
 .app-wrapper {
   display: flex;
   flex-direction: column;
@@ -83,18 +87,78 @@ body {
   overflow: hidden;
 }
 
-/* Form Panel */
+/* ── Progress Bar ── */
+.progress-bar-container {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+  padding: 8px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.progress-bar-track {
+  flex: 1;
+  height: 5px;
+  background: var(--border-color);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--epam-green);
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+
+.progress-bar-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  min-width: 110px;
+  text-align: right;
+}
+
+.progress-bar-label span {
+  color: var(--epam-green);
+}
+
+/* ── Form Panel ── */
 .form-panel {
   width: 46%;
   min-width: 360px;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
-  overflow-y: auto;
-  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   flex-shrink: 0;
+  position: relative;
 }
 
-/* Preview Panel */
+.form-panel-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px 32px;
+}
+
+/* A7: Bottom fade hint when content overflows */
+.form-panel::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(to bottom, transparent, var(--bg-secondary));
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ── Preview Panel ── */
 .preview-panel {
   flex: 1;
   background: var(--bg-primary);
@@ -129,9 +193,31 @@ body {
   flex: 1;
 }
 
-/* Form Sections */
+/* ── Form Sections ── */
+/* A4: More breathing room between sections */
 .form-section {
-  margin-bottom: 26px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-panel);
+}
+
+/* B1: Collapsible section header */
+.form-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--bg-card);
+  transition: background 0.15s;
+  gap: 8px;
+}
+
+.form-section-header:hover {
+  background: var(--bg-input);
 }
 
 .form-section-title {
@@ -140,9 +226,30 @@ body {
   color: var(--epam-green);
   text-transform: uppercase;
   letter-spacing: 1.2px;
-  margin-bottom: 12px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border-color);
+}
+
+.form-section-chevron {
+  color: var(--text-secondary);
+  font-size: 11px;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.form-section-chevron.open {
+  transform: rotate(180deg);
+}
+
+/* B1: Collapsible body */
+.form-section-body {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.28s ease, padding 0.2s ease;
+  padding: 0 14px;
+}
+
+.form-section-body.open {
+  max-height: 1200px;
+  padding: 14px 14px 16px;
 }
 
 .form-row {
@@ -164,6 +271,9 @@ body {
   color: var(--text-label);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .form-group input,
@@ -197,7 +307,28 @@ body {
   background: var(--bg-input);
 }
 
-/* Research Summary Table */
+/* A8: Synced badge */
+.synced-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--epam-green);
+  background: rgba(70, 178, 142, 0.12);
+  border: 1px solid rgba(70, 178, 142, 0.3);
+  border-radius: 10px;
+  padding: 1px 6px;
+  letter-spacing: 0.2px;
+  text-transform: none;
+}
+
+.synced-badge::before {
+  content: '●';
+  font-size: 7px;
+}
+
+/* ── Research Summary Table ── */
 .summary-table {
   width: 100%;
   border-collapse: collapse;
@@ -258,6 +389,11 @@ body {
   background: rgba(224, 82, 82, 0.15);
 }
 
+.btn-remove-row:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+}
+
 .btn-add-row {
   background: transparent;
   border: 1px dashed var(--epam-green-dark);
@@ -277,7 +413,7 @@ body {
   border-color: var(--epam-green);
 }
 
-/* Editable column header */
+/* A6: Column remove button — hidden until header row hovered */
 .th-editable {
   display: flex;
   align-items: center;
@@ -317,17 +453,19 @@ body {
   line-height: 1;
   padding: 1px 4px;
   border-radius: 3px;
-  opacity: 0.5;
+  opacity: 0;
   flex-shrink: 0;
   transition: opacity 0.15s, background 0.15s;
 }
 
-.btn-remove-col:hover {
+.summary-table th:hover .btn-remove-col {
   opacity: 1;
+}
+
+.btn-remove-col:hover {
   background: rgba(224, 82, 82, 0.15);
 }
 
-/* Add column button inside header */
 .th-add-col-cell {
   width: 56px;
   text-align: center;
@@ -352,7 +490,7 @@ body {
   border-color: var(--epam-green);
 }
 
-/* Key Insights dynamic list */
+/* ── Key Insights dynamic list ── */
 .insights-list {
   display: flex;
   flex-direction: column;
@@ -395,7 +533,7 @@ body {
   color: #666;
 }
 
-/* Sync reset button next to label */
+/* A8: Sync reset button */
 .btn-sync-reset {
   background: none;
   border: none;
@@ -403,10 +541,12 @@ body {
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  padding: 0 0 0 6px;
+  padding: 0 0 0 4px;
   opacity: 0.8;
   transition: opacity 0.15s;
   vertical-align: middle;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .btn-sync-reset:hover {
@@ -414,7 +554,7 @@ body {
   text-decoration: underline;
 }
 
-/* Buttons */
+/* ── Buttons ── */
 .btn-copy {
   display: inline-flex;
   align-items: center;
@@ -449,19 +589,46 @@ body {
 
 .btn-copy-html:hover { background: var(--epam-green-light); }
 
+/* A1: Reset button as proper CSS class */
+.btn-reset {
+  background: transparent;
+  border: 1px solid #555;
+  color: #aaa;
+  border-radius: 6px;
+  padding: 7px 16px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.btn-reset:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 .copy-actions {
   display: flex;
   gap: 8px;
   align-items: center;
 }
 
+/* A5: Toast fade animation */
+@keyframes toastFade {
+  0%   { opacity: 0; transform: translateY(4px); }
+  15%  { opacity: 1; transform: translateY(0); }
+  80%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 .copy-toast {
   font-size: 12px;
   color: var(--epam-green);
   font-weight: 600;
+  animation: toastFade 2.2s ease forwards;
 }
 
-/* Email Subject Bar */
+/* ── Email Subject Bar ── */
 .email-subject-bar {
   background: var(--bg-card);
   border-radius: 6px;
@@ -486,7 +653,7 @@ body {
   font-weight: 600;
 }
 
-/* Email Preview Box (white like real email) */
+/* ── Email Preview Box ── */
 .email-preview-box {
   background: #ffffff;
   color: #1a1a1a;
@@ -503,10 +670,11 @@ body {
   font-size: 14px;
 }
 
+/* A2: Better contrast heading color on white background */
 .ep-section-heading {
   font-weight: 700;
   font-size: 13px;
-  color: #7a6e00;
+  color: #4a3f00;
   text-transform: uppercase;
   margin: 20px 0 8px 0;
   letter-spacing: 0.4px;
@@ -544,7 +712,8 @@ body {
 
 .ep-interpretation {
   font-size: 13px;
-  margin-bottom: 6px;
+  margin-bottom: 10px;
+  margin-top: 4px;
 }
 
 .ep-bullet-list {
@@ -566,4 +735,47 @@ body {
 .ep-recommendations {
   font-size: 13px;
   white-space: pre-wrap;
+}
+
+/* B4: Empty state */
+.preview-empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 32px;
+  text-align: center;
+  gap: 16px;
+  color: var(--text-secondary);
+}
+
+.preview-empty-state .empty-icon {
+  font-size: 40px;
+  opacity: 0.3;
+}
+
+.preview-empty-state h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-label);
+}
+
+.preview-empty-state p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  max-width: 260px;
+  line-height: 1.6;
+}
+
+.preview-empty-arrow {
+  font-size: 22px;
+  color: var(--epam-green);
+  opacity: 0.5;
+  animation: arrowPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes arrowPulse {
+  0%, 100% { opacity: 0.4; transform: translateX(0); }
+  50%       { opacity: 0.9; transform: translateX(-6px); }
 }

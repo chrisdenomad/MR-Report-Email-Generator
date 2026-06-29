@@ -39,32 +39,30 @@ export default function App() {
       </header>
 
       <div className="app-body">
-        {/* Left — Input Form */}
-        <div className="form-panel">
-          <InputForm
-            form={form}
-            columns={columns}
-            summaryRows={summaryRows}
-            insights={insights}
-            effectiveMethodologyRole={effectiveMethodologyRole}
-            effectiveMethodologyLocation={effectiveMethodologyLocation}
-            updateField={updateField}
-            updateSummaryCell={updateSummaryCell}
-            addSummaryRow={addSummaryRow}
-            removeSummaryRow={removeSummaryRow}
-            addColumn={addColumn}
-            removeColumn={removeColumn}
-            updateColumnLabel={updateColumnLabel}
-            addInsight={addInsight}
-            removeInsight={removeInsight}
-            updateInsight={updateInsight}
-            overrideMethodologyRole={overrideMethodologyRole}
-            resetMethodologyRole={resetMethodologyRole}
-            overrideMethodologyLocation={overrideMethodologyLocation}
-            resetMethodologyLocation={resetMethodologyLocation}
-            resetForm={resetForm}
-          />
-        </div>
+        {/* Left — InputForm owns its own .form-panel wrapper */}
+        <InputForm
+          form={form}
+          columns={columns}
+          summaryRows={summaryRows}
+          insights={insights}
+          effectiveMethodologyRole={effectiveMethodologyRole}
+          effectiveMethodologyLocation={effectiveMethodologyLocation}
+          updateField={updateField}
+          updateSummaryCell={updateSummaryCell}
+          addSummaryRow={addSummaryRow}
+          removeSummaryRow={removeSummaryRow}
+          addColumn={addColumn}
+          removeColumn={removeColumn}
+          updateColumnLabel={updateColumnLabel}
+          addInsight={addInsight}
+          removeInsight={removeInsight}
+          updateInsight={updateInsight}
+          overrideMethodologyRole={overrideMethodologyRole}
+          resetMethodologyRole={resetMethodologyRole}
+          overrideMethodologyLocation={overrideMethodologyLocation}
+          resetMethodologyLocation={resetMethodologyLocation}
+          resetForm={resetForm}
+        />
 
         {/* Right — Email Preview */}
         <div className="preview-panel">
