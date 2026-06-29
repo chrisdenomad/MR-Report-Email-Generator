@@ -2,11 +2,19 @@ import ResearchSummaryTable from './ResearchSummaryTable'
 
 export default function InputForm({
   form,
+  columns,
   summaryRows,
+  insights,
   updateField,
-  updateSummaryRow,
+  updateSummaryCell,
   addSummaryRow,
   removeSummaryRow,
+  addColumn,
+  removeColumn,
+  updateColumnLabel,
+  addInsight,
+  removeInsight,
+  updateInsight,
   resetForm,
 }) {
   return (
@@ -40,17 +48,21 @@ export default function InputForm({
       <div className="form-section">
         <div className="form-section-title">Research Summary</div>
         <ResearchSummaryTable
+          columns={columns}
           rows={summaryRows}
-          onUpdate={updateSummaryRow}
-          onAdd={addSummaryRow}
-          onRemove={removeSummaryRow}
+          onUpdateCell={updateSummaryCell}
+          onAddRow={addSummaryRow}
+          onRemoveRow={removeSummaryRow}
+          onAddColumn={addColumn}
+          onRemoveColumn={removeColumn}
+          onUpdateColumnLabel={updateColumnLabel}
         />
       </div>
 
       {/* ── Interpretation ── */}
       <div className="form-section">
         <div className="form-section-title">Interpretation</div>
-        <div className="form-group" style={{ marginBottom: '10px' }}>
+        <div className="form-group">
           <label>Interpretation sentence</label>
           <textarea
             rows={3}
@@ -59,35 +71,36 @@ export default function InputForm({
             onChange={e => updateField('interpretation', e.target.value)}
           />
         </div>
-        <div className="form-group" style={{ marginBottom: '10px' }}>
-          <label>What does this mean?</label>
-          <textarea
-            rows={2}
-            value={form.whatDoesThisMean}
-            placeholder="Explain what the data means for the hiring team"
-            onChange={e => updateField('whatDoesThisMean', e.target.value)}
-          />
+      </div>
+
+      {/* ── Key Insights ── */}
+      <div className="form-section">
+        <div className="form-section-title">Key Insights</div>
+        <div className="insights-list">
+          {insights.map((item, index) => (
+            <div key={item.id} className="insight-row">
+              <span className="insight-bullet">•</span>
+              <input
+                type="text"
+                className="insight-input"
+                value={item.text}
+                placeholder={`Insight ${index + 1}`}
+                onChange={e => updateInsight(item.id, e.target.value)}
+              />
+              <button
+                className="btn-remove-row"
+                onClick={() => removeInsight(item.id)}
+                title="Remove insight"
+                disabled={insights.length === 1}
+              >
+                ×
+              </button>
+            </div>
+          ))}
         </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label>Is this risky?</label>
-            <textarea
-              rows={2}
-              value={form.isThisRisky}
-              placeholder="Describe any hiring risks"
-              onChange={e => updateField('isThisRisky', e.target.value)}
-            />
-          </div>
-          <div className="form-group">
-            <label>Can we scale?</label>
-            <textarea
-              rows={2}
-              value={form.canWeScale}
-              placeholder="Describe scalability of hiring"
-              onChange={e => updateField('canWeScale', e.target.value)}
-            />
-          </div>
-        </div>
+        <button className="btn-add-row" style={{ marginTop: '8px' }} onClick={addInsight}>
+          + Add Insight
+        </button>
       </div>
 
       {/* ── Search Methodology ── */}
@@ -111,65 +124,6 @@ export default function InputForm({
             value={form.coreSkills}
             placeholder="e.g. Java, Spring Boot, Microservices"
             onChange={e => updateField('coreSkills', e.target.value)}
-          />
-        </div>
-      </div>
-
-      {/* ── Key Insights ── */}
-      <div className="form-section">
-        <div className="form-section-title">Key Insights</div>
-        <div className="form-row">
-          <div className="form-group">
-            <label>Senior+ % of profiles</label>
-            <input
-              type="number"
-              value={form.seniorPlusPercent}
-              placeholder="e.g. 62"
-              min="0"
-              max="100"
-              onChange={e => updateField('seniorPlusPercent', e.target.value)}
-            />
-          </div>
-          <div className="form-group">
-            <label>Skills Availability</label>
-            <select
-              value={form.skillsAvailability}
-              onChange={e => updateField('skillsAvailability', e.target.value)}
-            >
-              <option value="widely available">Widely Available</option>
-              <option value="moderately available">Moderately Available</option>
-              <option value="scarce">Scarce</option>
-            </select>
-          </div>
-        </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label>Domain-experienced talent %</label>
-            <input
-              type="number"
-              value={form.domainExperiencedPercent}
-              placeholder="e.g. 28"
-              min="0"
-              max="100"
-              onChange={e => updateField('domainExperiencedPercent', e.target.value)}
-            />
-          </div>
-          <div className="form-group">
-            <label>Talent Concentration City/Cities</label>
-            <input
-              type="text"
-              value={form.talentConcentrationCity}
-              placeholder="e.g. Warsaw, Krakow"
-              onChange={e => updateField('talentConcentrationCity', e.target.value)}
-            />
-          </div>
-        </div>
-        <div className="form-group">
-          <label>Architect-level note</label>
-          <input
-            type="text"
-            value={form.architectNote}
-            onChange={e => updateField('architectNote', e.target.value)}
           />
         </div>
       </div>

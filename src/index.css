@@ -277,6 +277,124 @@ body {
   border-color: var(--epam-green);
 }
 
+/* Editable column header */
+.th-editable {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 80px;
+}
+
+.th-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed transparent;
+  color: var(--epam-green);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-family: inherit;
+  outline: none;
+  width: 100%;
+  min-width: 60px;
+  padding: 2px 2px;
+  cursor: text;
+  transition: border-color 0.15s;
+}
+
+.th-input:hover,
+.th-input:focus {
+  border-bottom-color: var(--epam-green-dark);
+}
+
+.btn-remove-col {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 1px 4px;
+  border-radius: 3px;
+  opacity: 0.5;
+  flex-shrink: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.btn-remove-col:hover {
+  opacity: 1;
+  background: rgba(224, 82, 82, 0.15);
+}
+
+/* Add column button inside header */
+.th-add-col-cell {
+  width: 56px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.btn-add-col {
+  background: transparent;
+  border: 1px dashed var(--epam-green-dark);
+  color: var(--epam-green);
+  border-radius: 4px;
+  padding: 3px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.btn-add-col:hover {
+  background: rgba(70, 178, 142, 0.12);
+  border-color: var(--epam-green);
+}
+
+/* Key Insights dynamic list */
+.insights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 4px;
+}
+
+.insight-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.insight-bullet {
+  color: var(--epam-green);
+  font-size: 16px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.insight-input {
+  flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  padding: 7px 10px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.insight-input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(70, 178, 142, 0.15);
+}
+
+.insight-input::placeholder {
+  color: #666;
+}
+
 /* Buttons */
 .btn-copy {
   display: inline-flex;

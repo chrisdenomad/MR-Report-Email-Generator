@@ -6,12 +6,20 @@ import './index.css'
 export default function App() {
   const {
     form,
+    columns,
     summaryRows,
+    insights,
     subject,
     updateField,
-    updateSummaryRow,
+    updateSummaryCell,
     addSummaryRow,
     removeSummaryRow,
+    addColumn,
+    removeColumn,
+    updateColumnLabel,
+    addInsight,
+    removeInsight,
+    updateInsight,
     resetForm,
   } = useFormState()
 
@@ -31,11 +39,19 @@ export default function App() {
         <div className="form-panel">
           <InputForm
             form={form}
+            columns={columns}
             summaryRows={summaryRows}
+            insights={insights}
             updateField={updateField}
-            updateSummaryRow={updateSummaryRow}
+            updateSummaryCell={updateSummaryCell}
             addSummaryRow={addSummaryRow}
             removeSummaryRow={removeSummaryRow}
+            addColumn={addColumn}
+            removeColumn={removeColumn}
+            updateColumnLabel={updateColumnLabel}
+            addInsight={addInsight}
+            removeInsight={removeInsight}
+            updateInsight={updateInsight}
             resetForm={resetForm}
           />
         </div>
@@ -44,7 +60,9 @@ export default function App() {
         <div className="preview-panel">
           <EmailPreview
             form={form}
+            columns={columns}
             summaryRows={summaryRows}
+            insights={insights}
             subject={subject}
           />
         </div>

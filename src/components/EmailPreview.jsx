@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { generatePlainText, generateHTML } from '../utils/generateEmail'
 
-export default function EmailPreview({ form, summaryRows, subject }) {
+export default function EmailPreview({ form, columns, summaryRows, insights, subject }) {
   const [toast, setToast] = useState('')
 
   function showToast(msg) {
@@ -10,12 +10,12 @@ export default function EmailPreview({ form, summaryRows, subject }) {
   }
 
   function copyPlainText() {
-    const text = generatePlainText(form, summaryRows, subject)
+    const text = generatePlainText(form, columns, summaryRows, insights, subject)
     navigator.clipboard.writeText(text).then(() => showToast('Copied as plain text!'))
   }
 
   function copyHTML() {
-    const html = generateHTML(form, summaryRows, subject)
+    const html = generateHTML(form, columns, summaryRows, insights, subject)
     const blob = new Blob([html], { type: 'text/html' })
     const item = new ClipboardItem({ 'text/html': blob })
     navigator.clipboard.write([item]).then(() => showToast('Copied as rich HTML!'))
@@ -23,7 +23,9 @@ export default function EmailPreview({ form, summaryRows, subject }) {
 
   const role = form.role || '[Role]'
   const location = form.location || '[Location]'
-  const filledRows = summaryRows.filter(r => r.level || r.candidates || r.percent)
+  const filledRows = summaryRows.filter(row =>
+    columns.some(col => row.values[col.id]?.trim())
+  )
 
   return (
     <>
@@ -68,30 +70,34 @@ export default function EmailPreview({ form, summaryRows, subject }) {
 
           {/* Research Summary */}
           <p className="ep-section-heading">Research Summary</p>
-          <table className="ep-table">
-            <thead>
-              <tr>
-                <th>Level / Category</th>
-                <th>Candidates Found</th>
-                <th>%</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filledRows.length > 0 ? (
-                filledRows.map(row => (
-                  <tr key={row.id}>
-                    <td>{row.level || '—'}</td>
-                    <td>{row.candidates || '—'}</td>
-                    <td>{row.percent ? `${row.percent}%` : '—'}</td>
-                  </tr>
-                ))
-              ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="ep-table">
+              <thead>
                 <tr>
-                  <td colSpan={3} className="ep-empty">No data entered yet</td>
+                  {columns.map(col => (
+                    <th key={col.id}>{col.label || '—'}</th>
+                  ))}
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filledRows.length > 0 ? (
+                  filledRows.map(row => (
+                    <tr key={row.id}>
+                      {columns.map(col => (
+                        <td key={col.id}>{row.values[col.id] || '—'}</td>
+                      ))}
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={columns.length} className="ep-empty">
+                      No data entered yet
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
 
           {/* Chart placeholder */}
           <span className="ep-chart-placeholder">Bar chart / Pie chart for visualization</span>
@@ -101,20 +107,18 @@ export default function EmailPreview({ form, summaryRows, subject }) {
             <em><strong>*Interpretation: </strong></em>
             {form.interpretation || <span className="ep-empty">[Add interpretation]</span>}
           </p>
-          <ul className="ep-bullet-list">
-            <li>
-              What does this mean?{' '}
-              {form.whatDoesThisMean || <span className="ep-empty">[Add answer]</span>}
-            </li>
-            <li>
-              Is this risky?{' '}
-              {form.isThisRisky || <span className="ep-empty">[Add answer]</span>}
-            </li>
-            <li>
-              Can we scale?{' '}
-              {form.canWeScale || <span className="ep-empty">[Add answer]</span>}
-            </li>
-          </ul>
+
+          {/* Key Insights */}
+          <p className="ep-section-heading">Key Insights</p>
+          {insights.filter(i => i.text.trim()).length > 0 ? (
+            <ul className="ep-bullet-list">
+              {insights.filter(i => i.text.trim()).map(item => (
+                <li key={item.id}>{item.text}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="ep-empty">[Add key insights]</p>
+          )}
 
           {/* Search Methodology */}
           <p className="ep-section-heading">Search Methodology</p>
@@ -131,23 +135,6 @@ export default function EmailPreview({ form, summaryRows, subject }) {
               <strong>Core Skills/Keyword:</strong>{' '}
               {form.coreSkills || <span className="ep-empty">[Add]</span>}
             </li>
-          </ul>
-
-          {/* Key Insights */}
-          <p className="ep-section-heading">Key Insights</p>
-          <ul className="ep-bullet-list">
-            <li>
-              ~{form.seniorPlusPercent || <span className="ep-empty">XX</span>}% of profiles meet Senior+ criteria
-            </li>
-            <li>Core technical skills are <strong>{form.skillsAvailability}</strong></li>
-            <li>
-              Domain-experienced talent represents ~{form.domainExperiencedPercent || <span className="ep-empty">XX</span>}% of the total pool
-            </li>
-            <li>
-              Talent concentration is highest in{' '}
-              {form.talentConcentrationCity || <span className="ep-empty">[City / Cities]</span>}
-            </li>
-            <li>{form.architectNote}</li>
           </ul>
 
           {/* Important Remarks */}
@@ -174,6 +161,7 @@ export default function EmailPreview({ form, summaryRows, subject }) {
           ) : (
             <p className="ep-empty">[Add recommendations]</p>
           )}
+
         </div>
       </div>
     </>

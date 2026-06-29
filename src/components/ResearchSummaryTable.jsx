@@ -1,57 +1,82 @@
-export default function ResearchSummaryTable({ rows, onUpdate, onAdd, onRemove }) {
+export default function ResearchSummaryTable({
+  columns,
+  rows,
+  onUpdateCell,
+  onAddRow,
+  onRemoveRow,
+  onAddColumn,
+  onRemoveColumn,
+  onUpdateColumnLabel,
+}) {
   return (
     <div>
-      <table className="summary-table">
-        <thead>
-          <tr>
-            <th>Level / Category</th>
-            <th>Candidates Found</th>
-            <th>%</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(row => (
-            <tr key={row.id}>
-              <td>
-                <input
-                  type="text"
-                  value={row.level}
-                  placeholder="e.g. Senior"
-                  onChange={e => onUpdate(row.id, 'level', e.target.value)}
-                />
-              </td>
-              <td>
-                <input
-                  type="text"
-                  value={row.candidates}
-                  placeholder="e.g. 120"
-                  onChange={e => onUpdate(row.id, 'candidates', e.target.value)}
-                />
-              </td>
-              <td>
-                <input
-                  type="text"
-                  value={row.percent}
-                  placeholder="e.g. 45"
-                  onChange={e => onUpdate(row.id, 'percent', e.target.value)}
-                />
-              </td>
-              <td className="action-cell">
-                <button
-                  className="btn-remove-row"
-                  onClick={() => onRemove(row.id)}
-                  title="Remove row"
-                  disabled={rows.length === 1}
-                >
-                  ×
+      <div style={{ overflowX: 'auto' }}>
+        <table className="summary-table">
+          <thead>
+            <tr>
+              {columns.map(col => (
+                <th key={col.id}>
+                  <div className="th-editable">
+                    <input
+                      className="th-input"
+                      value={col.label}
+                      onChange={e => onUpdateColumnLabel(col.id, e.target.value)}
+                      title="Click to rename column"
+                    />
+                    {columns.length > 1 && (
+                      <button
+                        className="btn-remove-col"
+                        onClick={() => onRemoveColumn(col.id)}
+                        title="Remove column"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                </th>
+              ))}
+              {/* Add column button in header */}
+              <th className="th-add-col-cell">
+                <button className="btn-add-col" onClick={onAddColumn} title="Add column">
+                  + Col
                 </button>
-              </td>
+              </th>
+              {/* Empty header for row-remove action column */}
+              <th style={{ width: '36px' }}></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      <button className="btn-add-row" onClick={onAdd}>
+          </thead>
+          <tbody>
+            {rows.map(row => (
+              <tr key={row.id}>
+                {columns.map(col => (
+                  <td key={col.id}>
+                    <input
+                      type="text"
+                      value={row.values[col.id] ?? ''}
+                      placeholder="—"
+                      onChange={e => onUpdateCell(row.id, col.id, e.target.value)}
+                    />
+                  </td>
+                ))}
+                {/* Empty cell under + Col header */}
+                <td></td>
+                {/* Remove row */}
+                <td className="action-cell">
+                  <button
+                    className="btn-remove-row"
+                    onClick={() => onRemoveRow(row.id)}
+                    title="Remove row"
+                    disabled={rows.length === 1}
+                  >
+                    ×
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <button className="btn-add-row" onClick={onAddRow}>
         + Add Row
       </button>
     </div>
