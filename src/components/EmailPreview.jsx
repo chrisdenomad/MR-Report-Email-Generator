@@ -1,7 +1,15 @@
 import { useState } from 'react'
 import { generatePlainText, generateHTML } from '../utils/generateEmail'
 
-export default function EmailPreview({ form, columns, summaryRows, insights, subject }) {
+export default function EmailPreview({
+  form,
+  columns,
+  summaryRows,
+  insights,
+  subject,
+  effectiveMethodologyRole,
+  effectiveMethodologyLocation,
+}) {
   const [toast, setToast] = useState('')
 
   function showToast(msg) {
@@ -10,12 +18,12 @@ export default function EmailPreview({ form, columns, summaryRows, insights, sub
   }
 
   function copyPlainText() {
-    const text = generatePlainText(form, columns, summaryRows, insights, subject)
+    const text = generatePlainText(form, columns, summaryRows, insights, subject, effectiveMethodologyRole, effectiveMethodologyLocation)
     navigator.clipboard.writeText(text).then(() => showToast('Copied as plain text!'))
   }
 
   function copyHTML() {
-    const html = generateHTML(form, columns, summaryRows, insights, subject)
+    const html = generateHTML(form, columns, summaryRows, insights, subject, effectiveMethodologyRole, effectiveMethodologyLocation)
     const blob = new Blob([html], { type: 'text/html' })
     const item = new ClipboardItem({ 'text/html': blob })
     navigator.clipboard.write([item]).then(() => showToast('Copied as rich HTML!'))
@@ -23,6 +31,7 @@ export default function EmailPreview({ form, columns, summaryRows, insights, sub
 
   const role = form.role || '[Role]'
   const location = form.location || '[Location]'
+  const recipientName = form.recipientName || ''
   const filledRows = summaryRows.filter(row =>
     columns.some(col => row.values[col.id]?.trim())
   )
@@ -62,7 +71,9 @@ export default function EmailPreview({ form, columns, summaryRows, insights, sub
         <div className="email-preview-box">
 
           {/* Greeting */}
-          <p className="ep-greeting">Hi,</p>
+          <p className="ep-greeting">
+            Hi{recipientName ? ` ${recipientName}` : ''},
+          </p>
           <p style={{ marginBottom: '16px', fontSize: '14px' }}>
             I would like to share with you the market capacity research for{' '}
             <strong>{role}</strong> in <strong>{location}</strong>.
@@ -102,11 +113,10 @@ export default function EmailPreview({ form, columns, summaryRows, insights, sub
           {/* Chart placeholder */}
           <span className="ep-chart-placeholder">Bar chart / Pie chart for visualization</span>
 
-          {/* Interpretation */}
-          <p className="ep-interpretation">
-            <em><strong>*Interpretation: </strong></em>
-            {form.interpretation || <span className="ep-empty">[Add interpretation]</span>}
-          </p>
+          {/* Interpretation — content only, no label */}
+          {form.interpretation && (
+            <p className="ep-interpretation">{form.interpretation}</p>
+          )}
 
           {/* Key Insights */}
           <p className="ep-section-heading">Key Insights</p>
@@ -123,9 +133,9 @@ export default function EmailPreview({ form, columns, summaryRows, insights, sub
           {/* Search Methodology */}
           <p className="ep-section-heading">Search Methodology</p>
           <ul className="ep-bullet-list">
-            <li><strong>Role:</strong> {role}</li>
+            <li><strong>Role:</strong> {effectiveMethodologyRole || <span className="ep-empty">[Add role]</span>}</li>
             <li><strong>Search Platform:</strong> LinkedIn (visible profiles only)</li>
-            <li><strong>Location:</strong> {location}</li>
+            <li><strong>Location:</strong> {effectiveMethodologyLocation || <span className="ep-empty">[Add location]</span>}</li>
             <li><strong>Excluded Company:</strong> EPAM</li>
             <li>
               <strong>Total Years of Experience:</strong>{' '}

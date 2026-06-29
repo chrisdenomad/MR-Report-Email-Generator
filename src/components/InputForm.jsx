@@ -5,6 +5,8 @@ export default function InputForm({
   columns,
   summaryRows,
   insights,
+  effectiveMethodologyRole,
+  effectiveMethodologyLocation,
   updateField,
   updateSummaryCell,
   addSummaryRow,
@@ -15,6 +17,10 @@ export default function InputForm({
   addInsight,
   removeInsight,
   updateInsight,
+  overrideMethodologyRole,
+  resetMethodologyRole,
+  overrideMethodologyLocation,
+  resetMethodologyLocation,
   resetForm,
 }) {
   return (
@@ -22,6 +28,15 @@ export default function InputForm({
       {/* ── Header ── */}
       <div className="form-section">
         <div className="form-section-title">Header</div>
+        <div className="form-group" style={{ marginBottom: '10px' }}>
+          <label>Recipient Name</label>
+          <input
+            type="text"
+            value={form.recipientName}
+            placeholder="e.g. Sarah"
+            onChange={e => updateField('recipientName', e.target.value)}
+          />
+        </div>
         <div className="form-row">
           <div className="form-group">
             <label>Role (A)</label>
@@ -106,6 +121,53 @@ export default function InputForm({
       {/* ── Search Methodology ── */}
       <div className="form-section">
         <div className="form-section-title">Search Methodology</div>
+
+        {/* Role — synced from header */}
+        <div className="form-row" style={{ marginBottom: '10px' }}>
+          <div className="form-group">
+            <label>
+              Role
+              {form.methodologyRoleOverridden && (
+                <button
+                  className="btn-sync-reset"
+                  onClick={resetMethodologyRole}
+                  title="Reset to header value"
+                >
+                  ↺ sync
+                </button>
+              )}
+            </label>
+            <input
+              type="text"
+              value={effectiveMethodologyRole}
+              placeholder={form.role ? form.role : 'Auto-filled from header'}
+              onChange={e => overrideMethodologyRole(e.target.value)}
+            />
+          </div>
+
+          {/* Location — synced from header, editable for city/region */}
+          <div className="form-group">
+            <label>
+              Location
+              {form.methodologyLocationOverridden && (
+                <button
+                  className="btn-sync-reset"
+                  onClick={resetMethodologyLocation}
+                  title="Reset to header value"
+                >
+                  ↺ sync
+                </button>
+              )}
+            </label>
+            <input
+              type="text"
+              value={effectiveMethodologyLocation}
+              placeholder={form.location ? form.location : 'Auto-filled from header'}
+              onChange={e => overrideMethodologyLocation(e.target.value)}
+            />
+          </div>
+        </div>
+
         <div className="form-row">
           <div className="form-group">
             <label>Total Years of Experience</label>

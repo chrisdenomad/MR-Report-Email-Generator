@@ -10,6 +10,8 @@ export default function App() {
     summaryRows,
     insights,
     subject,
+    effectiveMethodologyRole,
+    effectiveMethodologyLocation,
     updateField,
     updateSummaryCell,
     addSummaryRow,
@@ -20,12 +22,15 @@ export default function App() {
     addInsight,
     removeInsight,
     updateInsight,
+    overrideMethodologyRole,
+    resetMethodologyRole,
+    overrideMethodologyLocation,
+    resetMethodologyLocation,
     resetForm,
   } = useFormState()
 
   return (
     <div className="app-wrapper">
-      {/* Header */}
       <header className="app-header">
         <div className="logo-bar" />
         <h1>
@@ -33,7 +38,6 @@ export default function App() {
         </h1>
       </header>
 
-      {/* Two-panel body */}
       <div className="app-body">
         {/* Left — Input Form */}
         <div className="form-panel">
@@ -42,6 +46,8 @@ export default function App() {
             columns={columns}
             summaryRows={summaryRows}
             insights={insights}
+            effectiveMethodologyRole={effectiveMethodologyRole}
+            effectiveMethodologyLocation={effectiveMethodologyLocation}
             updateField={updateField}
             updateSummaryCell={updateSummaryCell}
             addSummaryRow={addSummaryRow}
@@ -52,6 +58,10 @@ export default function App() {
             addInsight={addInsight}
             removeInsight={removeInsight}
             updateInsight={updateInsight}
+            overrideMethodologyRole={overrideMethodologyRole}
+            resetMethodologyRole={resetMethodologyRole}
+            overrideMethodologyLocation={overrideMethodologyLocation}
+            resetMethodologyLocation={resetMethodologyLocation}
             resetForm={resetForm}
           />
         </div>
@@ -64,6 +74,8 @@ export default function App() {
             summaryRows={summaryRows}
             insights={insights}
             subject={subject}
+            effectiveMethodologyRole={effectiveMethodologyRole}
+            effectiveMethodologyLocation={effectiveMethodologyLocation}
           />
         </div>
       </div>

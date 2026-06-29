@@ -395,6 +395,25 @@ body {
   color: #666;
 }
 
+/* Sync reset button next to label */
+.btn-sync-reset {
+  background: none;
+  border: none;
+  color: var(--epam-green);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 0 0 6px;
+  opacity: 0.8;
+  transition: opacity 0.15s;
+  vertical-align: middle;
+}
+
+.btn-sync-reset:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
 /* Buttons */
 .btn-copy {
   display: inline-flex;

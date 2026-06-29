@@ -1,9 +1,11 @@
 /**
  * generatePlainText — produces a plain-text version of the email
  */
-export function generatePlainText(form, columns, summaryRows, insights, subject) {
+export function generatePlainText(form, columns, summaryRows, insights, subject, effectiveMethodologyRole, effectiveMethodologyLocation) {
   const role = form.role || '[Role]'
   const location = form.location || '[Location]'
+  const recipientName = form.recipientName || ''
+  const greeting = recipientName ? `Hi ${recipientName},` : 'Hi,'
 
   // Build table header
   const colLabels = columns.map(c => c.label || '—').join(' | ')
@@ -28,7 +30,7 @@ export function generatePlainText(form, columns, summaryRows, insights, subject)
   const lines = [
     `Subject: ${subject}`,
     '',
-    'Hi,',
+    greeting,
     '',
     `I would like to share with you the market capacity research for ${role} in ${location}.`,
     '',
@@ -41,7 +43,7 @@ export function generatePlainText(form, columns, summaryRows, insights, subject)
     '',
     '[Bar chart / Pie chart for visualization]',
     '',
-    `*Interpretation: ${form.interpretation || '[Add interpretation]'}`,
+    form.interpretation || '[Add interpretation]',
     '',
     '──────────────────────────────────────',
     'KEY INSIGHTS',
@@ -51,9 +53,9 @@ export function generatePlainText(form, columns, summaryRows, insights, subject)
     '──────────────────────────────────────',
     'SEARCH METHODOLOGY',
     '──────────────────────────────────────',
-    `• Role: ${role}`,
+    `• Role: ${effectiveMethodologyRole || '[Add role]'}`,
     '• Search Platform: LinkedIn (visible profiles only)',
-    `• Location: ${location}`,
+    `• Location: ${effectiveMethodologyLocation || '[Add location]'}`,
     '• Excluded Company: EPAM',
     `• Total Years of Experience: ${form.totalYearsExperience || '[Add]'}`,
     `• Core Skills/Keyword: ${form.coreSkills || '[Add]'}`,
@@ -77,15 +79,16 @@ export function generatePlainText(form, columns, summaryRows, insights, subject)
 /**
  * generateHTML — produces an HTML version of the email for rich paste
  */
-export function generateHTML(form, columns, summaryRows, insights, subject) {
+export function generateHTML(form, columns, summaryRows, insights, subject, effectiveMethodologyRole, effectiveMethodologyLocation) {
   const role = form.role || '[Role]'
   const location = form.location || '[Location]'
+  const recipientName = form.recipientName || ''
+  const greeting = recipientName ? `Hi ${recipientName},` : 'Hi,'
 
   const sectionHeadingStyle =
     'font-weight:700;font-size:13px;color:#7a6e00;text-transform:uppercase;margin:20px 0 8px 0;letter-spacing:0.4px;'
   const bulletStyle = 'margin:3px 0;font-size:13px;'
 
-  // Table header
   const thStyle = 'background:#f0f0f0;font-weight:700;padding:6px 10px;text-align:left;border:1px solid #ccc;'
   const tdStyle = 'padding:5px 10px;border:1px solid #ccc;'
 
@@ -102,18 +105,21 @@ export function generateHTML(form, columns, summaryRows, insights, subject) {
       ).join('')
     : `<tr><td colspan="${columns.length}" style="${tdStyle}color:#aaa;">No data</td></tr>`
 
-  // Key insights
   const insightItemsHtml = insights
     .filter(i => i.text.trim())
     .map(i => `<li style="${bulletStyle}">${i.text}</li>`)
     .join('')
+
+  const interpretationHtml = form.interpretation
+    ? `<p style="font-size:13px;margin-bottom:14px;">${form.interpretation}</p>`
+    : ''
 
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"></head>
 <body style="font-family:Arial,sans-serif;font-size:14px;color:#1a1a1a;line-height:1.6;max-width:800px;">
 
-<p style="margin-bottom:14px;">Hi,</p>
+<p style="margin-bottom:14px;">${greeting}</p>
 
 <p style="margin-bottom:18px;">
   I would like to share with you the market capacity research for
@@ -130,9 +136,7 @@ export function generateHTML(form, columns, summaryRows, insights, subject) {
   Bar chart / Pie chart for visualization
 </p>
 
-<p style="font-size:13px;margin-bottom:14px;">
-  <em><strong>*Interpretation:</strong></em> ${form.interpretation || '[Add interpretation]'}
-</p>
+${interpretationHtml}
 
 <p style="${sectionHeadingStyle}">Key Insights</p>
 <ul style="padding-left:20px;margin:4px 0 10px 0;">
@@ -141,9 +145,9 @@ export function generateHTML(form, columns, summaryRows, insights, subject) {
 
 <p style="${sectionHeadingStyle}">Search Methodology</p>
 <ul style="padding-left:20px;margin:4px 0 10px 0;">
-  <li style="${bulletStyle}"><strong>Role:</strong> ${role}</li>
+  <li style="${bulletStyle}"><strong>Role:</strong> ${effectiveMethodologyRole || '[Add role]'}</li>
   <li style="${bulletStyle}"><strong>Search Platform:</strong> LinkedIn (visible profiles only)</li>
-  <li style="${bulletStyle}"><strong>Location:</strong> ${location}</li>
+  <li style="${bulletStyle}"><strong>Location:</strong> ${effectiveMethodologyLocation || '[Add location]'}</li>
   <li style="${bulletStyle}"><strong>Excluded Company:</strong> EPAM</li>
   <li style="${bulletStyle}"><strong>Total Years of Experience:</strong> ${form.totalYearsExperience || '[Add]'}</li>
   <li style="${bulletStyle}"><strong>Core Skills/Keyword:</strong> ${form.coreSkills || '[Add]'}</li>

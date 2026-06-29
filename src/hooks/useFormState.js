@@ -30,9 +30,16 @@ const defaultInsights = [
 
 // ── Default form ─────────────────────────────────────────────────────────────
 const defaultForm = {
+  recipientName: '',
   role: '',
   location: '',
   interpretation: '',
+  // Methodology overrides
+  methodologyRole: '',
+  methodologyRoleOverridden: false,
+  methodologyLocation: '',
+  methodologyLocationOverridden: false,
+  // Rest
   totalYearsExperience: '',
   coreSkills: '',
   recommendations: '',
@@ -124,6 +131,23 @@ export function useFormState() {
     )
   }
 
+  // ── Methodology overrides ──
+  function overrideMethodologyRole(value) {
+    setForm(prev => ({ ...prev, methodologyRole: value, methodologyRoleOverridden: true }))
+  }
+
+  function resetMethodologyRole() {
+    setForm(prev => ({ ...prev, methodologyRole: '', methodologyRoleOverridden: false }))
+  }
+
+  function overrideMethodologyLocation(value) {
+    setForm(prev => ({ ...prev, methodologyLocation: value, methodologyLocationOverridden: true }))
+  }
+
+  function resetMethodologyLocation() {
+    setForm(prev => ({ ...prev, methodologyLocation: '', methodologyLocationOverridden: false }))
+  }
+
   // ── Reset ──
   function resetForm() {
     setForm(defaultForm)
@@ -135,7 +159,10 @@ export function useFormState() {
     setNextInsightId(defaultInsights.length + 1)
   }
 
+  // ── Computed values ──
   const subject = `Market Capacity Report – ${form.role || '[Role]'} in ${form.location || '[Location]'}`
+  const effectiveMethodologyRole = form.methodologyRoleOverridden ? form.methodologyRole : form.role
+  const effectiveMethodologyLocation = form.methodologyLocationOverridden ? form.methodologyLocation : form.location
 
   return {
     form,
@@ -143,6 +170,8 @@ export function useFormState() {
     summaryRows,
     insights,
     subject,
+    effectiveMethodologyRole,
+    effectiveMethodologyLocation,
     updateField,
     updateSummaryCell,
     addSummaryRow,
@@ -153,6 +182,10 @@ export function useFormState() {
     addInsight,
     removeInsight,
     updateInsight,
+    overrideMethodologyRole,
+    resetMethodologyRole,
+    overrideMethodologyLocation,
+    resetMethodologyLocation,
     resetForm,
   }
 }
