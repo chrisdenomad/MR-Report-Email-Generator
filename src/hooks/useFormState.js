@@ -1,4 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+
+const STORAGE_KEY = 'mr_report_form_state'
+const TEMPLATES_KEY = 'mr_report_templates'
+const MAX_TEMPLATES = 10
 
 // ── Default columns ──────────────────────────────────────────────────────────
 const defaultColumns = [
@@ -43,19 +47,85 @@ const defaultForm = {
   recommendations: '',
 }
 
+// ── localStorage helpers ─────────────────────────────────────────────────────
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
+function saveToStorage(state) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  } catch {
+    // storage quota exceeded or unavailable — fail silently
+  }
+}
+
+function clearStorage() {
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+  } catch {
+    // fail silently
+  }
+}
+
+// ── Template helpers ─────────────────────────────────────────────────────────
+function loadTemplates() {
+  try {
+    const raw = localStorage.getItem(TEMPLATES_KEY)
+    if (!raw) return []
+    return JSON.parse(raw)
+  } catch {
+    return []
+  }
+}
+
+function saveTemplates(templates) {
+  try {
+    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(templates))
+  } catch {
+    // fail silently
+  }
+}
+
+// ── Restore or fall back to defaults ────────────────────────────────────────
+function getInitialState() {
+  const saved = loadFromStorage()
+  if (!saved) {
+    return {
+      form: { ...defaultForm },
+      columns: defaultColumns.map(c => ({ ...c })),
+      summaryRows: defaultSummaryRows.map(r => ({ ...r, values: { ...r.values } })),
+      nextRowId: defaultSummaryRows.length + 1,
+      nextColId: defaultColumns.length + 1,
+      insights: defaultInsights.map(i => ({ ...i })),
+      nextInsightId: defaultInsights.length + 1,
+    }
+  }
+  return saved
+}
+
 // ── Hook ─────────────────────────────────────────────────────────────────────
 export function useFormState() {
-  const [form, setForm] = useState(defaultForm)
+  const initial = getInitialState()
 
-  // Summary table
-  const [columns, setColumns] = useState(defaultColumns)
-  const [summaryRows, setSummaryRows] = useState(defaultSummaryRows)
-  const [nextRowId, setNextRowId] = useState(defaultSummaryRows.length + 1)
-  const [nextColId, setNextColId] = useState(defaultColumns.length + 1)
+  const [form, setForm] = useState(initial.form)
+  const [columns, setColumns] = useState(initial.columns)
+  const [summaryRows, setSummaryRows] = useState(initial.summaryRows)
+  const [nextRowId, setNextRowId] = useState(initial.nextRowId)
+  const [nextColId, setNextColId] = useState(initial.nextColId)
+  const [insights, setInsights] = useState(initial.insights)
+  const [nextInsightId, setNextInsightId] = useState(initial.nextInsightId)
 
-  // Key Insights
-  const [insights, setInsights] = useState(defaultInsights)
-  const [nextInsightId, setNextInsightId] = useState(defaultInsights.length + 1)
+  // ── Auto-save on every change ──
+  useEffect(() => {
+    saveToStorage({ form, columns, summaryRows, nextRowId, nextColId, insights, nextInsightId })
+  }, [form, columns, summaryRows, nextRowId, nextColId, insights, nextInsightId])
 
   // ── Form ──
   function updateField(field, value) {
@@ -73,10 +143,8 @@ export function useFormState() {
     )
   }
 
-  // Fix #4: Use current columns snapshot (not stale closure)
   function addSummaryRow() {
     setSummaryRows(prev => {
-      // derive current column ids from the prev row shape to avoid stale closure
       const colIds = Object.keys(prev[0]?.values ?? {})
       const values = {}
       colIds.forEach(id => { values[id] = '' })
@@ -137,7 +205,6 @@ export function useFormState() {
   }
 
   // ── Methodology overrides ──
-  // Fix #7: Auto-clear override flag when field is emptied
   function overrideMethodologyRole(value) {
     setForm(prev => ({
       ...prev,
@@ -163,7 +230,6 @@ export function useFormState() {
   }
 
   // ── Reset ──
-  // Fix #3: Deep-clone defaults to avoid shared object reference mutations
   function resetForm() {
     setForm({ ...defaultForm })
     setColumns(defaultColumns.map(c => ({ ...c })))
@@ -172,10 +238,48 @@ export function useFormState() {
     setNextColId(defaultColumns.length + 1)
     setInsights(defaultInsights.map(i => ({ ...i })))
     setNextInsightId(defaultInsights.length + 1)
+    clearStorage()
+  }
+
+  // ── Bulk restore (used by template loader) ──
+  function restoreState(saved) {
+    setForm({ ...defaultForm, ...saved.form })
+    setColumns(saved.columns ?? defaultColumns.map(c => ({ ...c })))
+    setSummaryRows(saved.summaryRows ?? defaultSummaryRows.map(r => ({ ...r, values: { ...r.values } })))
+    setNextRowId(saved.nextRowId ?? defaultSummaryRows.length + 1)
+    setNextColId(saved.nextColId ?? defaultColumns.length + 1)
+    setInsights(saved.insights ?? defaultInsights.map(i => ({ ...i })))
+    setNextInsightId(saved.nextInsightId ?? defaultInsights.length + 1)
+  }
+
+  // ── Templates ──
+  const [templates, setTemplates] = useState(() => loadTemplates())
+
+  function saveTemplate(name) {
+    if (!name.trim()) return
+    const snapshot = { form, columns, summaryRows, nextRowId, nextColId, insights, nextInsightId }
+    setTemplates(prev => {
+      const filtered = prev.filter(t => t.name !== name.trim())
+      const updated = [{ name: name.trim(), snapshot, savedAt: Date.now() }, ...filtered].slice(0, MAX_TEMPLATES)
+      saveTemplates(updated)
+      return updated
+    })
+  }
+
+  function deleteTemplate(name) {
+    setTemplates(prev => {
+      const updated = prev.filter(t => t.name !== name)
+      saveTemplates(updated)
+      return updated
+    })
+  }
+
+  function loadTemplate(name) {
+    const tpl = templates.find(t => t.name === name)
+    if (tpl) restoreState(tpl.snapshot)
   }
 
   // ── Computed values ──
-  // subject is a convenience derivation — keep in sync with role/location formatting
   const subject = `Market Capacity Report – ${form.role || '[Role]'} in ${form.location || '[Location]'}`
   const effectiveMethodologyRole = form.methodologyRoleOverridden ? form.methodologyRole : form.role
   const effectiveMethodologyLocation = form.methodologyLocationOverridden ? form.methodologyLocation : form.location
@@ -203,5 +307,10 @@ export function useFormState() {
     overrideMethodologyLocation,
     resetMethodologyLocation,
     resetForm,
+    restoreState,
+    templates,
+    saveTemplate,
+    deleteTemplate,
+    loadTemplate,
   }
 }

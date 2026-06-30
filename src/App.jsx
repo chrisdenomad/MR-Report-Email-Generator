@@ -32,6 +32,10 @@ export default function App() {
     overrideMethodologyLocation,
     resetMethodologyLocation,
     resetForm,
+    templates,
+    saveTemplate,
+    deleteTemplate,
+    loadTemplate,
   } = useFormState()
 
   const [splitPct, setSplitPct] = useState(DEFAULT_PCT)
@@ -120,6 +124,10 @@ export default function App() {
           overrideMethodologyLocation={overrideMethodologyLocation}
           resetMethodologyLocation={resetMethodologyLocation}
           resetForm={resetForm}
+          templates={templates}
+          saveTemplate={saveTemplate}
+          deleteTemplate={deleteTemplate}
+          loadTemplate={loadTemplate}
         />
 
         {/* Drag handle */}
