@@ -36,6 +36,10 @@ export default function App() {
     saveTemplate,
     deleteTemplate,
     loadTemplate,
+    apiKey,
+    saveApiKey,
+    apiKeyNote,
+    saveApiKeyNote,
   } = useFormState()
 
   const [splitPct, setSplitPct] = useState(DEFAULT_PCT)
@@ -128,6 +132,10 @@ export default function App() {
           saveTemplate={saveTemplate}
           deleteTemplate={deleteTemplate}
           loadTemplate={loadTemplate}
+          apiKey={apiKey}
+          saveApiKey={saveApiKey}
+          apiKeyNote={apiKeyNote}
+          saveApiKeyNote={saveApiKeyNote}
         />
 
         {/* Drag handle */}

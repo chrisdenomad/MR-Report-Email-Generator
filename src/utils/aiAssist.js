@@ -1,20 +1,25 @@
 const GITHUB_AI_ENDPOINT = 'https://models.inference.ai.azure.com/chat/completions'
 const GITHUB_AI_MODEL = 'gpt-4o-mini'
-const API_KEY = import.meta.env.VITE_GITHUB_AI_KEY || ''
 
 /**
  * Low-level call to GitHub Models API (OpenAI-compatible)
+ * @param {string} systemPrompt
+ * @param {string} userPrompt
+ * @param {string} apiKey - GitHub Personal Access Token entered by the user
  */
-async function callAI(systemPrompt, userPrompt) {
-  if (!API_KEY) {
-    throw new Error('AI key not configured. Please set VITE_GITHUB_AI_KEY in your .env file.')
+async function callAI(systemPrompt, userPrompt, apiKey) {
+  const key = apiKey?.trim()
+  if (!key) {
+    throw new Error('No API key set. Paste your GitHub token into the GitHub API Key field.')
   }
+
+  console.log('[AI] Using key:', key.slice(0, 8) + '…', '| length:', key.length)
 
   const response = await fetch(GITHUB_AI_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${API_KEY}`,
+      'Authorization': `Bearer ${key}`,
     },
     body: JSON.stringify({
       model: GITHUB_AI_MODEL,
@@ -28,6 +33,16 @@ async function callAI(systemPrompt, userPrompt) {
   })
 
   if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error(
+        'Invalid or expired GitHub token (401). Make sure your token is a valid GitHub Personal Access Token from github.com/settings/tokens and that your account has access to GitHub Models.'
+      )
+    }
+    if (response.status === 403) {
+      throw new Error(
+        'Access denied (403). Your token may not have access to GitHub Models. Visit github.com/marketplace/models to check your access.'
+      )
+    }
     const err = await response.text()
     throw new Error(`AI request failed (${response.status}): ${err}`)
   }
@@ -56,7 +71,7 @@ function buildTableSummary(columns, summaryRows) {
 /**
  * Generate interpretation sentence from research data
  */
-export async function generateInterpretation(form, columns, summaryRows) {
+export async function generateInterpretation(form, columns, summaryRows, apiKey) {
   const tableSummary = buildTableSummary(columns, summaryRows)
 
   const systemPrompt = `You are a market research analyst writing concise email content for a recruiter at EPAM.
@@ -72,13 +87,13 @@ ${tableSummary}
 
 The interpretation should summarize what the numbers tell us about the market — availability, seniority distribution, and any notable patterns. Be concise and factual.`
 
-  return callAI(systemPrompt, userPrompt)
+  return callAI(systemPrompt, userPrompt, apiKey)
 }
 
 /**
  * Generate key insights bullet points from research data
  */
-export async function generateKeyInsights(form, columns, summaryRows) {
+export async function generateKeyInsights(form, columns, summaryRows, apiKey) {
   const tableSummary = buildTableSummary(columns, summaryRows)
 
   const systemPrompt = `You are a market research analyst writing concise email content for a recruiter at EPAM.
@@ -95,7 +110,7 @@ ${tableSummary}
 
 Insights should cover: seniority distribution, skill availability, talent concentration by city, competition level, and hiring cycle expectations.`
 
-  const raw = await callAI(systemPrompt, userPrompt)
+  const raw = await callAI(systemPrompt, userPrompt, apiKey)
 
   // Parse bullet lines → array of strings
   return raw
@@ -108,7 +123,7 @@ Insights should cover: seniority distribution, skill availability, talent concen
 /**
  * Generate recommendations paragraph from all form data
  */
-export async function generateRecommendations(form, columns, summaryRows) {
+export async function generateRecommendations(form, columns, summaryRows, apiKey) {
   const tableSummary = buildTableSummary(columns, summaryRows)
 
   const systemPrompt = `You are a market research analyst writing concise email content for a recruiter at EPAM.
@@ -127,5 +142,5 @@ Interpretation: ${form.interpretation || 'Not provided'}
 
 Recommendations should advise the hiring manager on sourcing strategy, realistic expectations, and any adjustments to consider (e.g. broadening location, adjusting seniority requirements, pipeline timing).`
 
-  return callAI(systemPrompt, userPrompt)
+  return callAI(systemPrompt, userPrompt, apiKey)
 }

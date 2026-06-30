@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 
 const STORAGE_KEY = 'mr_report_form_state'
 const TEMPLATES_KEY = 'mr_report_templates'
+const API_KEY_STORAGE = 'mr_report_api_key'
+const API_KEY_NOTE_STORAGE = 'mr_report_api_key_note'
 const MAX_TEMPLATES = 10
 
 // ── Default columns ──────────────────────────────────────────────────────────
@@ -255,6 +257,37 @@ export function useFormState() {
   // ── Templates ──
   const [templates, setTemplates] = useState(() => loadTemplates())
 
+  // ── API Key (persisted separately, never in form snapshots) ──
+  const [apiKey, setApiKeyState] = useState(() => {
+    try { return localStorage.getItem(API_KEY_STORAGE) || '' } catch { return '' }
+  })
+
+  function saveApiKey(key) {
+    const trimmed = key.trim()
+    setApiKeyState(trimmed)
+    try {
+      if (trimmed) { localStorage.setItem(API_KEY_STORAGE, trimmed) }
+      else { localStorage.removeItem(API_KEY_STORAGE) }
+    } catch {
+      // fail silently
+    }
+  }
+
+  // ── API Key Note (editable note displayed to teammates) ──
+  const [apiKeyNote, setApiKeyNoteState] = useState(() => {
+    try { return localStorage.getItem(API_KEY_NOTE_STORAGE) || '' } catch { return '' }
+  })
+
+  function saveApiKeyNote(text) {
+    setApiKeyNoteState(text)
+    try {
+      if (text.trim()) { localStorage.setItem(API_KEY_NOTE_STORAGE, text) }
+      else { localStorage.removeItem(API_KEY_NOTE_STORAGE) }
+    } catch {
+      // fail silently
+    }
+  }
+
   function saveTemplate(name) {
     if (!name.trim()) return
     const snapshot = { form, columns, summaryRows, nextRowId, nextColId, insights, nextInsightId }
@@ -312,5 +345,9 @@ export function useFormState() {
     saveTemplate,
     deleteTemplate,
     loadTemplate,
+    apiKey,
+    saveApiKey,
+    apiKeyNote,
+    saveApiKeyNote,
   }
 }

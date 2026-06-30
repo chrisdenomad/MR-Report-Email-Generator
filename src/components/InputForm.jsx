@@ -158,7 +158,216 @@ function TemplatesPanel({ templates, onSave, onLoad, onDelete }) {
   )
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// ── API Key Note Modal ────────────────────────────────────────────────────────
+function NoteModal({ note, onSave, onClose }) {
+  const [draft, setDraft] = useState(note)
+  const [mode, setMode] = useState(note ? 'preview' : 'edit')
+  const [saved, setSaved] = useState(false)
+
+  function handleSave() {
+    onSave(draft)
+    setSaved(true)
+    setMode('preview')
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  return (
+    <div className="note-modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="note-modal">
+        <div className="note-modal-header">
+          <span className="note-modal-title">API Key Note</span>
+          <div className="note-modal-tabs">
+            <button
+              type="button"
+              className={`note-tab${mode === 'edit' ? ' active' : ''}`}
+              onClick={() => setMode('edit')}
+            >Edit</button>
+            <button
+              type="button"
+              className={`note-tab${mode === 'preview' ? ' active' : ''}`}
+              onClick={() => setMode('preview')}
+              disabled={!draft.trim()}
+            >Preview</button>
+          </div>
+          <button type="button" className="note-modal-close" onClick={onClose} aria-label="Close">×</button>
+        </div>
+
+        <div className="note-modal-body">
+          {mode === 'edit' ? (
+            <textarea
+              className="note-textarea"
+              value={draft}
+              onChange={e => { setDraft(e.target.value); setSaved(false) }}
+              placeholder={'Write a note for your teammates here...\n\nExample:\nTo use AI features:\n1. Go to github.com/settings/tokens\n2. Generate new token (classic) — no scopes needed\n3. Paste the token in the field below and hit Save'}
+              autoFocus
+            />
+          ) : (
+            <div className="note-preview">
+              {draft.trim()
+                ? draft.split('\n').map((line, i) => (
+                    line.trim() === ''
+                      ? <br key={i} />
+                      : <p key={i}>{line}</p>
+                  ))
+                : <span className="note-preview-empty">No note yet. Switch to Edit to write one.</span>
+              }
+            </div>
+          )}
+        </div>
+
+        <div className="note-modal-footer">
+          {mode === 'edit' && (
+            <button
+              type="button"
+              className="btn-save-note"
+              onClick={handleSave}
+              disabled={draft === note}
+            >
+              {saved ? 'Saved!' : 'Save Note'}
+            </button>
+          )}
+          <button type="button" className="btn-close-note" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── AI Key Panel ──────────────────────────────────────────────────────────────
+function AiKeyPanel({ apiKey, onSave, apiKeyNote, onSaveNote }) {
+  const [draft, setDraft] = useState(apiKey)
+  const [showKey, setShowKey] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [showNote, setShowNote] = useState(false)
+
+  function handleSave() {
+    onSave(draft.trim())
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  function handleClear() {
+    setDraft('')
+    onSave('')
+    setSaved(false)
+  }
+
+  const isActive = !!apiKey
+  const hasNote = !!apiKeyNote.trim()
+
+  return (
+    <div className={`ai-key-panel${isActive ? ' ai-key-panel--active' : ''}`}>
+      <div className="ai-key-panel-header">
+        <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+        </svg>
+        <span className="ai-key-panel-title">GitHub API Key</span>
+        {isActive
+          ? <span className="ai-key-badge ai-key-badge--set">active</span>
+          : <span className="ai-key-badge ai-key-badge--missing">required for AI</span>
+        }
+        <button
+          type="button"
+          className={`btn-note-trigger${hasNote ? ' btn-note-trigger--has-note' : ''}`}
+          onClick={() => setShowNote(true)}
+          title={hasNote ? 'View / edit note' : 'Add a note for teammates'}
+          aria-label="Open note"
+        >
+          {hasNote ? (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+          ) : (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          )}
+          <span>{hasNote ? 'Note' : 'Add note'}</span>
+        </button>
+      </div>
+
+      <p className="ai-key-hint">
+        Paste a{' '}
+        <a href="https://github.com/settings/tokens" target="_blank" rel="noreferrer" className="ai-key-link">
+          GitHub Personal Access Token
+        </a>
+        {' '}(classic, no scopes needed). Your account must have access to{' '}
+        <a href="https://github.com/marketplace/models" target="_blank" rel="noreferrer" className="ai-key-link">
+          GitHub Models
+        </a>
+        . Key is saved only in your browser.
+      </p>
+
+      <div className="ai-key-row">
+        <div className="ai-key-input-wrap">
+          <input
+            type={showKey ? 'text' : 'password'}
+            className="ai-key-input"
+            placeholder="Paste your token here (ghp_…)"
+            value={draft}
+            onChange={e => { setDraft(e.target.value); setSaved(false) }}
+            onKeyDown={e => e.key === 'Enter' && handleSave()}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <button
+            type="button"
+            className="btn-toggle-key-visibility"
+            onClick={() => setShowKey(v => !v)}
+            title={showKey ? 'Hide key' : 'Show key'}
+            aria-label={showKey ? 'Hide key' : 'Show key'}
+          >
+            {showKey ? (
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            ) : (
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            )}
+          </button>
+        </div>
+        <button
+          type="button"
+          className="btn-save-api-key"
+          onClick={handleSave}
+          disabled={draft.trim() === apiKey || !draft.trim()}
+        >
+          {saved ? 'Saved!' : 'Save'}
+        </button>
+        {isActive && (
+          <button
+            type="button"
+            className="btn-clear-api-key"
+            onClick={handleClear}
+            title="Remove saved key"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      {showNote && (
+        <NoteModal
+          note={apiKeyNote}
+          onSave={onSaveNote}
+          onClose={() => setShowNote(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+
 export default function InputForm({
   style,
   form,
@@ -186,6 +395,10 @@ export default function InputForm({
   saveTemplate,
   deleteTemplate,
   loadTemplate,
+  apiKey,
+  saveApiKey,
+  apiKeyNote,
+  saveApiKeyNote,
 }) {
   const [openSections, setOpenSections] = useState(new Set(ALL_SECTIONS))
   const [aiLoading, setAiLoading] = useState({ interpretation: false, insights: false, recommendations: false })
@@ -208,7 +421,7 @@ export default function InputForm({
     setAiError('')
     setAiLoading(p => ({ ...p, interpretation: true }))
     try {
-      const text = await generateInterpretation(form, columns, summaryRows)
+      const text = await generateInterpretation(form, columns, summaryRows, apiKey)
       updateField('interpretation', text)
     } catch (e) {
       setAiError(e.message)
@@ -221,7 +434,7 @@ export default function InputForm({
     setAiError('')
     setAiLoading(p => ({ ...p, insights: true }))
     try {
-      const bullets = await generateKeyInsights(form, columns, summaryRows)
+      const bullets = await generateKeyInsights(form, columns, summaryRows, apiKey)
       // Replace insights list with AI-generated ones
       bullets.forEach((text, idx) => {
         if (idx < insights.length) {
@@ -243,7 +456,7 @@ export default function InputForm({
     setAiError('')
     setAiLoading(p => ({ ...p, recommendations: true }))
     try {
-      const text = await generateRecommendations(form, columns, summaryRows)
+      const text = await generateRecommendations(form, columns, summaryRows, apiKey)
       updateField('recommendations', text)
     } catch (e) {
       setAiError(e.message)
@@ -273,6 +486,9 @@ export default function InputForm({
           onLoad={loadTemplate}
           onDelete={deleteTemplate}
         />
+
+        {/* AI Key panel */}
+        <AiKeyPanel apiKey={apiKey} onSave={saveApiKey} apiKeyNote={apiKeyNote} onSaveNote={saveApiKeyNote} />
 
         {/* AI error banner */}
         {aiError && (
