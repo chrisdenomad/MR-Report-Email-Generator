@@ -691,7 +691,11 @@ export default function InputForm({
 
         {/* Reset */}
         <div className="btn-reset-container">
-          <button className="btn-reset" onClick={resetForm}>
+          <button className="btn-reset" onClick={() => {
+            if (window.confirm('Reset all form data? This cannot be undone.')) {
+              resetForm()
+            }
+          }}>
             Reset Form
           </button>
         </div>

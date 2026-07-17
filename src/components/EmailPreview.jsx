@@ -21,6 +21,7 @@ export default function EmailPreview({
   subject,
   effectiveMethodologyRole,
   effectiveMethodologyLocation,
+  resetForm,
 }) {
   const [toast, setToast] = useState('')
   // Fix #5: counter key so same message re-triggers animation
@@ -61,6 +62,22 @@ export default function EmailPreview({
         <div className="copy-actions">
           {/* Fix #5: toastKey guarantees remount even with same message */}
           {toast && <span key={toastKey} className="copy-toast">{toast}</span>}
+          <button
+            className="btn-reset-header"
+            onClick={() => {
+              if (window.confirm('Reset all form data? This cannot be undone.')) {
+                resetForm()
+              }
+            }}
+            disabled={empty}
+            title="Clear all form data"
+          >
+            <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="1 4 1 10 7 10"></polyline>
+              <path d="M3.51 15a9 9 0 1 0 .49-3.51"></path>
+            </svg>
+            Reset Form
+          </button>
           <button className="btn-copy btn-copy-plain" onClick={copyPlainText} disabled={empty}>
             {/* Fix #22: aria-hidden on decorative SVGs */}
             <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

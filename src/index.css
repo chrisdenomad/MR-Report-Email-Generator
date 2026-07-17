@@ -697,6 +697,32 @@ body {
   padding: 14px 0 8px;
 }
 
+/* Reset button in the preview panel header */
+.btn-reset-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  border-radius: 6px;
+  padding: 7px 13px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-reset-header:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+.btn-reset-header:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .copy-actions {
   display: flex;
   gap: 8px;

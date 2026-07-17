@@ -161,6 +161,7 @@ export default function App() {
           subject={subject}
           effectiveMethodologyRole={effectiveMethodologyRole}
           effectiveMethodologyLocation={effectiveMethodologyLocation}
+          resetForm={resetForm}
         />
       </div>
     </div>
