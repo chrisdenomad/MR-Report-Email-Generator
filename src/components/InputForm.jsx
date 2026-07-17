@@ -7,6 +7,94 @@ import {
 } from '../utils/aiAssist'
 import { RESET_CONFIRM_MSG } from './EmailPreview'
 
+// ── Preset examples for opening & closing lines ───────────────────────────────
+const OPENING_LINE_EXAMPLES = [
+  'I would like to share with you the market capacity research for [Role] in [Location].',
+  'As requested, here is the market capacity research for [Role] in [Location].',
+  'Please find below the market capacity research for [Role] positions in [Location].',
+  'I wanted to share the latest talent market insights for [Role] in [Location].',
+  'Here is an overview of the available talent pool for [Role] in [Location].',
+]
+
+const CLOSING_LINE_EXAMPLES = [
+  'Please let me know if you have any questions or would like to explore additional criteria.',
+  'Happy to discuss these findings further — feel free to reach out anytime.',
+  'Let me know if you would like to adjust the search criteria or explore other locations.',
+  'I am available to walk you through the findings in more detail if needed.',
+  'Looking forward to your feedback and happy to refine the search further.',
+]
+
+// ── LineFieldWithExamples ─────────────────────────────────────────────────────
+// A text input with a collapsible "Examples" dropdown that lets the user
+// pick a preset or keep typing their own value.
+function LineFieldWithExamples({ id, label, value, onChange, examples, hint }) {
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!open) return
+    function handleClick(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
+
+  function pick(example) {
+    onChange(example)
+    setOpen(false)
+  }
+
+  return (
+    <div className="form-group line-field-wrap" ref={wrapRef}>
+      <div className="field-label-row">
+        <label htmlFor={id}>
+          {label}
+          {hint && <span className="synced-badge" title={hint}>{hint}</span>}
+        </label>
+        <button
+          type="button"
+          className="btn-examples-toggle"
+          onClick={() => setOpen(o => !o)}
+          aria-expanded={open}
+          title="Show example phrases"
+        >
+          <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          Examples
+        </button>
+      </div>
+      <input
+        id={id}
+        type="text"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={examples[0]}
+      />
+      {open && (
+        <ul className="examples-dropdown" role="listbox" aria-label={`${label} examples`}>
+          {examples.map((ex, i) => (
+            <li
+              key={i}
+              className={`examples-option${value === ex ? ' selected' : ''}`}
+              role="option"
+              aria-selected={value === ex}
+              onClick={() => pick(ex)}
+              title={ex}
+            >
+              {ex}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 const ALL_SECTIONS = ['header', 'summary', 'interpretation', 'insights', 'methodology', 'recommendations']
 
 // Compute how many sections have content
@@ -562,20 +650,15 @@ export default function InputForm({
               />
             </div>
           </div>
-          {/* Content suggestion #1: editable opening line */}
-          <div className="form-group">
-            <label htmlFor="field-openingLine">
-              Opening line
-              <span className="synced-badge" title="Use [Role] and [Location] as placeholders — they are replaced automatically">[Role] &amp; [Location] auto-filled</span>
-            </label>
-            <input
-              id="field-openingLine"
-              type="text"
-              value={form.openingLine}
-              placeholder="e.g. I would like to share with you the market capacity research for [Role] in [Location]."
-              onChange={e => updateField('openingLine', e.target.value)}
-            />
-          </div>
+          {/* Content suggestion #1: editable opening line with examples */}
+          <LineFieldWithExamples
+            id="field-openingLine"
+            label="Opening line"
+            value={form.openingLine}
+            onChange={val => updateField('openingLine', val)}
+            examples={OPENING_LINE_EXAMPLES}
+            hint="[Role] & [Location] auto-filled"
+          />
         </Section>
 
         {/* ── Research Summary ── */}
@@ -742,17 +825,14 @@ export default function InputForm({
               onChange={e => updateField('recommendations', e.target.value)}
             />
           </div>
-          {/* Content suggestion #6: editable closing line */}
-          <div className="form-group">
-            <label htmlFor="field-closingLine">Closing line</label>
-            <input
-              id="field-closingLine"
-              type="text"
-              value={form.closingLine}
-              placeholder="e.g. Please let me know if you have any questions."
-              onChange={e => updateField('closingLine', e.target.value)}
-            />
-          </div>
+          {/* Content suggestion #6: editable closing line with examples */}
+          <LineFieldWithExamples
+            id="field-closingLine"
+            label="Closing line"
+            value={form.closingLine}
+            onChange={val => updateField('closingLine', val)}
+            examples={CLOSING_LINE_EXAMPLES}
+          />
         </Section>
 
         {/* Reset */}
