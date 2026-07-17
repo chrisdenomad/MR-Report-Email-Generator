@@ -147,9 +147,12 @@ export default function EmailPreview({
             <p className="ep-greeting">
               Hi{recipientName ? ` ${recipientName}` : ''},
             </p>
+            {/* Content suggestion #1: render interpolated opening line */}
             <p className="ep-intro">
-              I would like to share with you the market capacity research for{' '}
-              <strong>{role}</strong> in <strong>{location}</strong>.
+              {(form.openingLine || 'I would like to share with you the market capacity research for [Role] in [Location].')
+                .replace('[Role]', role)
+                .replace('[Location]', location)
+              }
             </p>
 
             {/* Research Summary */}
@@ -183,8 +186,10 @@ export default function EmailPreview({
               </table>
             </div>
 
-            {/* Chart placeholder */}
-            <span className="ep-chart-placeholder">Bar chart / Pie chart for visualization</span>
+            {/* Chart placeholder — content suggestion #5: conditional */}
+            {form.includeChartPlaceholder !== false && (
+              <span className="ep-chart-placeholder">Bar chart / Pie chart for visualization</span>
+            )}
 
             {/* Interpretation — content only, no label */}
             {form.interpretation && (
@@ -229,7 +234,12 @@ export default function EmailPreview({
               <p className="ep-empty">[Add recommendations]</p>
             )}
 
-            {/* Fix #1: Important Remarks sourced from IMPORTANT_REMARKS constant — no more duplicate hardcoding */}
+            {/* Content suggestion #6: closing line after recommendations */}
+            {form.closingLine?.trim() && (
+              <p className="ep-closing-line">{form.closingLine}</p>
+            )}
+
+            {/* Content suggestion #1: Important Remarks sourced from IMPORTANT_REMARKS constant */}
             <p className="ep-section-heading">Important Remarks</p>
             <ul className="ep-bullet-list">
               {IMPORTANT_REMARKS.map((remark, i) => (

@@ -867,6 +867,37 @@ td.ep-empty {
   white-space: pre-wrap;
 }
 
+/* Content suggestion #6: closing line */
+.ep-closing-line {
+  font-size: 13px;
+  color: var(--text-primary);
+  margin-top: 10px;
+  margin-bottom: 4px;
+  font-style: italic;
+}
+
+/* Content suggestion #5: chart placeholder toggle checkbox */
+.chart-toggle-row {
+  margin-top: 10px;
+}
+
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
 /* ── B4: Empty state ── */
 .preview-empty-state {
   flex: 1;

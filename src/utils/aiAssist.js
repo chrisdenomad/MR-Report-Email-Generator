@@ -81,7 +81,6 @@ async function callAI(systemPrompt, userPrompt, apiKey, maxTokens = 600) {
  * Build a compact summary of the research table for AI prompts
  */
 function buildTableSummary(columns, summaryRows) {
-  // Fix #6: use shared getFilledRows instead of inline filter
   const filledRows = getFilledRows(summaryRows, columns)
   if (filledRows.length === 0) return 'No research data entered yet.'
 
@@ -95,10 +94,27 @@ function buildTableSummary(columns, summaryRows) {
 }
 
 /**
+ * Content suggestion #2: derive total candidate count from table data
+ * Sums numeric values across all cells — gracefully ignores non-numeric entries.
+ */
+function deriveTotalCandidates(columns, summaryRows) {
+  const filledRows = getFilledRows(summaryRows, columns)
+  let total = 0
+  filledRows.forEach(row => {
+    columns.forEach(col => {
+      const val = parseFloat(String(row.values[col.id] || '').replace(/[^0-9.]/g, ''))
+      if (!isNaN(val)) total += val
+    })
+  })
+  return total > 0 ? Math.round(total) : null
+}
+
+/**
  * Generate interpretation sentence from research data
  */
 export async function generateInterpretation(form, columns, summaryRows, apiKey) {
   const tableSummary = buildTableSummary(columns, summaryRows)
+  const totalCandidates = deriveTotalCandidates(columns, summaryRows)
 
   const systemPrompt = `${BASE_SYSTEM_PROMPT}
 Your output should be a single paragraph (2-4 sentences) — no headers, no bullet points, no preamble.`
@@ -107,6 +123,8 @@ Your output should be a single paragraph (2-4 sentences) — no headers, no bull
 
 Role: ${form.role || 'Not specified'}
 Location: ${form.location || 'Not specified'}
+${form.recipientName ? `Hiring manager: ${form.recipientName}` : ''}
+${totalCandidates ? `Total candidates in pool: approximately ${totalCandidates}` : ''}
 Research table data:
 ${tableSummary}
 
@@ -120,6 +138,7 @@ The interpretation should summarize what the numbers tell us about the market �
  */
 export async function generateKeyInsights(form, columns, summaryRows, apiKey) {
   const tableSummary = buildTableSummary(columns, summaryRows)
+  const totalCandidates = deriveTotalCandidates(columns, summaryRows)
 
   const systemPrompt = `${BASE_SYSTEM_PROMPT}
 Return 3 to 5 bullet points depending on how much data is available. Each bullet should be a single sentence starting with a data point or observation.
@@ -129,6 +148,8 @@ Output ONLY the bullet points, one per line, each starting with "• ". No heade
 
 Role: ${form.role || 'Not specified'}
 Location: ${form.location || 'Not specified'}
+${form.recipientName ? `Hiring manager: ${form.recipientName}` : ''}
+${totalCandidates ? `Total candidates in pool: approximately ${totalCandidates}` : ''}
 Research table data:
 ${tableSummary}
 
@@ -149,6 +170,7 @@ Insights should cover: seniority distribution, skill availability, talent concen
  */
 export async function generateRecommendations(form, columns, summaryRows, apiKey) {
   const tableSummary = buildTableSummary(columns, summaryRows)
+  const totalCandidates = deriveTotalCandidates(columns, summaryRows)
 
   const systemPrompt = `${BASE_SYSTEM_PROMPT}
 Be specific and actionable. Your output should be 3-5 sentences — no headers, no bullet points, no preamble.`
@@ -157,6 +179,8 @@ Be specific and actionable. Your output should be 3-5 sentences — no headers, 
 
 Role: ${form.role || 'Not specified'}
 Location: ${form.location || 'Not specified'}
+${form.recipientName ? `Hiring manager: ${form.recipientName}` : ''}
+${totalCandidates ? `Total candidates in pool: approximately ${totalCandidates}` : ''}
 Years of experience required: ${form.totalYearsExperience || 'Not specified'}
 Core skills: ${form.coreSkills || 'Not specified'}
 Research table data:

@@ -562,6 +562,20 @@ export default function InputForm({
               />
             </div>
           </div>
+          {/* Content suggestion #1: editable opening line */}
+          <div className="form-group">
+            <label htmlFor="field-openingLine">
+              Opening line
+              <span className="synced-badge" title="Use [Role] and [Location] as placeholders — they are replaced automatically">[Role] &amp; [Location] auto-filled</span>
+            </label>
+            <input
+              id="field-openingLine"
+              type="text"
+              value={form.openingLine}
+              placeholder="e.g. I would like to share with you the market capacity research for [Role] in [Location]."
+              onChange={e => updateField('openingLine', e.target.value)}
+            />
+          </div>
         </Section>
 
         {/* ── Research Summary ── */}
@@ -576,6 +590,17 @@ export default function InputForm({
             onRemoveColumn={removeColumn}
             onUpdateColumnLabel={updateColumnLabel}
           />
+          {/* Content suggestion #5: chart placeholder toggle */}
+          <div className="form-group chart-toggle-row">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={form.includeChartPlaceholder !== false}
+                onChange={e => updateField('includeChartPlaceholder', e.target.checked)}
+              />
+              Include chart placeholder in email
+            </label>
+          </div>
         </Section>
 
         {/* ── Interpretation ── */}
@@ -715,6 +740,17 @@ export default function InputForm({
               value={form.recommendations}
               placeholder="Enter your recommendations for the hiring manager..."
               onChange={e => updateField('recommendations', e.target.value)}
+            />
+          </div>
+          {/* Content suggestion #6: editable closing line */}
+          <div className="form-group">
+            <label htmlFor="field-closingLine">Closing line</label>
+            <input
+              id="field-closingLine"
+              type="text"
+              value={form.closingLine}
+              placeholder="e.g. Please let me know if you have any questions."
+              onChange={e => updateField('closingLine', e.target.value)}
             />
           </div>
         </Section>

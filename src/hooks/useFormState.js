@@ -42,6 +42,8 @@ const defaultForm = {
   recipientName: '',
   role: '',
   location: '',
+  // Content suggestion #1: editable opening line ([Role] and [Location] are interpolated at render time)
+  openingLine: 'I would like to share with you the market capacity research for [Role] in [Location].',
   interpretation: '',
   methodologyRole: '',
   methodologyRoleOverridden: false,
@@ -50,6 +52,10 @@ const defaultForm = {
   totalYearsExperience: '',
   coreSkills: '',
   recommendations: '',
+  // Content suggestion #6: editable closing line
+  closingLine: 'Please let me know if you have any questions or would like to explore additional criteria.',
+  // Content suggestion #5: toggle chart placeholder visibility
+  includeChartPlaceholder: true,
 }
 
 // ── Fix #9: consolidated localStorage helpers ─────────────────────────────────
@@ -308,7 +314,9 @@ export function useFormState() {
   }
 
   // ── Computed values ──
-  const subject = `Market Capacity Report – ${form.role || '[Role]'} in ${form.location || '[Location]'}`
+  // Content suggestion #7: include current month + year in subject line
+  const monthYear = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })
+  const subject = `Market Capacity Report – ${form.role || '[Role]'} – ${form.location || '[Location]'} – ${monthYear}`
   const effectiveMethodologyRole = form.methodologyRoleOverridden ? form.methodologyRole : form.role
   const effectiveMethodologyLocation = form.methodologyLocationOverridden ? form.methodologyLocation : form.location
 

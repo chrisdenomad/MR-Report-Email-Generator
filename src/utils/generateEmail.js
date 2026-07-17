@@ -1,18 +1,17 @@
 // ── Shared boilerplate ────────────────────────────────────────────────────────
+// Content suggestion #4: simplified, cleaner language for hiring managers
 export const IMPORTANT_REMARKS = [
-  'This dataset is based solely on LinkedIn database (not all professionals maintain updated profiles) which align to search criteria, actual availability and expertise require screening and direct engagement to identify the suitable candidates for the position.',
-  'Results may include from NHA companies and restricted countries, in line with EPAM policies for external hiring intelligence.',
+  'Data is sourced from LinkedIn and reflects publicly visible profiles matching the search criteria. Actual availability requires direct engagement and screening.',
+  'Results may include profiles from restricted companies or regions, subject to EPAM hiring policies.',
   'Figures represent market estimates, not exact headcounts or hiring guarantees.',
 ]
 
 // ── Shared helper: filter rows that have at least one filled cell ─────────────
-// Fix #6: was copy-pasted in generatePlainText, generateHTML, aiAssist, EmailPreview
 export function getFilledRows(rows, columns) {
   return rows.filter(row => columns.some(col => row.values[col.id]?.trim()))
 }
 
 // ── HTML escape helper ────────────────────────────────────────────────────────
-// Fix #14: exported so callers (e.g. EmailPreview) can reuse; null/undefined safe
 export function escapeHtml(str) {
   if (str == null) return ''
   return String(str)
@@ -30,6 +29,11 @@ export function generatePlainText(form, columns, summaryRows, insights, subject,
   const location = form.location || '[Location]'
   const recipientName = form.recipientName || ''
   const greeting = recipientName ? `Hi ${recipientName},` : 'Hi,'
+
+  // Content suggestion #1: use editable opening line, interpolate role/location
+  const openingLine = (form.openingLine || 'I would like to share with you the market capacity research for [Role] in [Location].')
+    .replace('[Role]', role)
+    .replace('[Location]', location)
 
   // Build table header
   const colLabels = columns.map(c => c.label || '—').join(' | ')
@@ -54,7 +58,7 @@ export function generatePlainText(form, columns, summaryRows, insights, subject,
     '',
     greeting,
     '',
-    `I would like to share with you the market capacity research for ${role} in ${location}.`,
+    openingLine,
     '',
     '──────────────────────────────────────',
     'RESEARCH SUMMARY',
@@ -63,8 +67,8 @@ export function generatePlainText(form, columns, summaryRows, insights, subject,
     `  ${colSeparator}`,
     tableRows,
     '',
-    '[Bar chart / Pie chart for visualization]',
-    '',
+    // Content suggestion #5: conditional chart placeholder
+    ...(form.includeChartPlaceholder !== false ? ['[Bar chart / Pie chart for visualization]', ''] : []),
     form.interpretation || '[Add interpretation]',
     '',
     '──────────────────────────────────────',
@@ -83,14 +87,16 @@ export function generatePlainText(form, columns, summaryRows, insights, subject,
     `• Core Skills/Keyword: ${form.coreSkills || '[Add]'}`,
     '',
     '──────────────────────────────────────',
-    'IMPORTANT REMARKS',
-    '──────────────────────────────────────',
-    ...IMPORTANT_REMARKS.map(r => `• ${r}`),
-    '',
-    '──────────────────────────────────────',
     'RECOMMENDATIONS',
     '──────────────────────────────────────',
     form.recommendations || '[Add recommendations]',
+    '',
+    // Content suggestion #6: closing line after recommendations, before remarks
+    ...(form.closingLine?.trim() ? [form.closingLine, ''] : []),
+    '──────────────────────────────────────',
+    'IMPORTANT REMARKS',
+    '──────────────────────────────────────',
+    ...IMPORTANT_REMARKS.map(r => `• ${r}`),
   ]
 
   return lines.join('\n')
@@ -107,14 +113,17 @@ export function generatePlainText(form, columns, summaryRows, insights, subject,
  *  - Explicit font-family on every text element (Outlook strips inherited fonts)
  *  - No flexbox / grid — tables only for layout
  *  - mso-line-height-rule for Outlook line-height consistency
- *
- * Fix #11: removed unused `subject` parameter
  */
 export function generateHTML(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation) {
   const role = form.role || '[Role]'
   const location = form.location || '[Location]'
   const recipientName = form.recipientName || ''
   const greeting = recipientName ? `Hi ${recipientName},` : 'Hi,'
+
+  // Content suggestion #1: editable opening line with role/location interpolated
+  const openingLine = (form.openingLine || 'I would like to share with you the market capacity research for [Role] in [Location].')
+    .replace('[Role]', role)
+    .replace('[Location]', location)
 
   // ── Inline style constants (Outlook-safe, no shorthand) ──
   const bodyStyle = [
@@ -281,15 +290,24 @@ export function generateHTML(form, columns, summaryRows, insights, effectiveMeth
     ? `<p style="${pStyle}">${escapeHtml(form.interpretation)}</p>`
     : ''
 
-  // Fix #5: handle both \n and \r\n (Windows line endings from pasted content)
+  // Handle both \n and \r\n (Windows line endings from pasted content)
   const recommendationsHtml = form.recommendations
     ? escapeHtml(form.recommendations).replace(/\r?\n/g, '<br>')
     : '[Add recommendations]'
 
-  // Fix #14: IMPORTANT_REMARKS now go through escapeHtml for consistency
+  // Content suggestion #6: closing line HTML
+  const closingLineHtml = form.closingLine?.trim()
+    ? `<p style="${pStyle}">${escapeHtml(form.closingLine)}</p>`
+    : ''
+
   const remarksHtml = IMPORTANT_REMARKS
     .map(r => `<li style="${liStyle}">${escapeHtml(r)}</li>`)
     .join('')
+
+  // Content suggestion #5: conditional chart placeholder
+  const chartPlaceholderHtml = form.includeChartPlaceholder !== false
+    ? `\n<p style="${chartNoteStyle}">Bar chart / Pie chart for visualization</p>\n`
+    : ''
 
   return `<!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
@@ -310,10 +328,7 @@ export function generateHTML(form, columns, summaryRows, insights, effectiveMeth
 
 <p style="${pStyle}">${greeting}</p>
 
-<p style="${pStyle}">
-  I would like to share with you the market capacity research for
-  <strong style="${strongStyle}">${escapeHtml(role)}</strong> in <strong style="${strongStyle}">${escapeHtml(location)}</strong>.
-</p>
+<p style="${pStyle}">${escapeHtml(openingLine)}</p>
 
 <p style="${sectionHeadingStyle}">Research Summary</p>
 <table style="${tableStyle}" cellpadding="0" cellspacing="0" border="0" width="100%">
@@ -324,9 +339,7 @@ export function generateHTML(form, columns, summaryRows, insights, effectiveMeth
     ${tbodyHtml}
   </tbody>
 </table>
-
-<p style="${chartNoteStyle}">Bar chart / Pie chart for visualization</p>
-
+${chartPlaceholderHtml}
 ${interpretationHtml}
 
 <p style="${sectionHeadingStyle}">Key Insights</p>
@@ -344,13 +357,15 @@ ${interpretationHtml}
   <li style="${liStyle}"><strong style="${strongStyle}">Core Skills/Keyword:</strong> ${escapeHtml(form.coreSkills || '[Add]')}</li>
 </ul>
 
+<p style="${sectionHeadingStyle}">Recommendations</p>
+<p style="${pStyle}">${recommendationsHtml}</p>
+
+${closingLineHtml}
+
 <p style="${sectionHeadingStyle}">Important Remarks</p>
 <ul style="${ulStyle}">
   ${remarksHtml}
 </ul>
-
-<p style="${sectionHeadingStyle}">Recommendations</p>
-<p style="${pStyle}">${recommendationsHtml}</p>
 
 </div>
 </body>
