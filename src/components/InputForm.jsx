@@ -83,7 +83,10 @@ function LineFieldWithExamples({ id, label, value, onChange, examples, hint }) {
               className={`examples-option${value === ex ? ' selected' : ''}`}
               role="option"
               aria-selected={value === ex}
-              onClick={() => pick(ex)}
+              // Fix: use onMouseDown + preventDefault so the outside-click handler
+              // (which listens to mousedown) does not fire and close the dropdown
+              // before this selection is applied.
+              onMouseDown={e => { e.preventDefault(); pick(ex) }}
               title={ex}
             >
               {ex}

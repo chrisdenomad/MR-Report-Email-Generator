@@ -304,6 +304,8 @@ body {
 }
 
 .form-section-body.open {
+  /* overflow: visible allows absolutely-positioned dropdowns (e.g. examples dropdown) to escape the section bounds */
+  overflow: visible;
   max-height: 4000px;
   transition: max-height 0.45s cubic-bezier(1, 0, 1, 0), padding 0.2s ease;
   padding: 14px 14px 16px;
