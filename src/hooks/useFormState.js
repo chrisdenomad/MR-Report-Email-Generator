@@ -99,7 +99,12 @@ function getInitialState() {
       nextInsightId: defaultInsights.length + 1,
     }
   }
-  return saved
+  // Merge saved form with defaultForm so any new fields added after the user
+  // last saved will get their default values instead of coming back as undefined.
+  return {
+    ...saved,
+    form: { ...defaultForm, ...saved.form },
+  }
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
