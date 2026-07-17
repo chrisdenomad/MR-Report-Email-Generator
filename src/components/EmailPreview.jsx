@@ -234,18 +234,18 @@ export default function EmailPreview({
               <p className="ep-empty">[Add recommendations]</p>
             )}
 
-            {/* Content suggestion #6: closing line after recommendations */}
-            {form.closingLine?.trim() && (
-              <p className="ep-closing-line">{form.closingLine}</p>
-            )}
-
-            {/* Content suggestion #1: Important Remarks sourced from IMPORTANT_REMARKS constant */}
+            {/* Important Remarks */}
             <p className="ep-section-heading">Important Remarks</p>
             <ul className="ep-bullet-list">
               {IMPORTANT_REMARKS.map((remark, i) => (
                 <li key={i}>{remark}</li>
               ))}
             </ul>
+
+            {/* Closing line — after Important Remarks */}
+            {form.closingLine?.trim() && (
+              <p className="ep-closing-line">{form.closingLine}</p>
+            )}
 
           </div>
         </div>

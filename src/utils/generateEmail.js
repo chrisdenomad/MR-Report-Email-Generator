@@ -91,12 +91,12 @@ export function generatePlainText(form, columns, summaryRows, insights, subject,
     '──────────────────────────────────────',
     form.recommendations || '[Add recommendations]',
     '',
-    // Content suggestion #6: closing line after recommendations, before remarks
-    ...(form.closingLine?.trim() ? [form.closingLine, ''] : []),
     '──────────────────────────────────────',
     'IMPORTANT REMARKS',
     '──────────────────────────────────────',
     ...IMPORTANT_REMARKS.map(r => `• ${r}`),
+    // Closing line after Important Remarks
+    ...(form.closingLine?.trim() ? ['', form.closingLine] : []),
   ]
 
   return lines.join('\n')
@@ -360,12 +360,12 @@ ${interpretationHtml}
 <p style="${sectionHeadingStyle}">Recommendations</p>
 <p style="${pStyle}">${recommendationsHtml}</p>
 
-${closingLineHtml}
-
 <p style="${sectionHeadingStyle}">Important Remarks</p>
 <ul style="${ulStyle}">
   ${remarksHtml}
 </ul>
+
+${closingLineHtml}
 
 </div>
 </body>
