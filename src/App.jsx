@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { useFormState } from './hooks/useFormState'
+import { useFormState, loadSplitPct, saveSplitPct } from './hooks/useFormState'
 import InputForm from './components/InputForm'
 import EmailPreview from './components/EmailPreview'
 import './index.css'
@@ -27,6 +27,7 @@ export default function App() {
     addInsight,
     removeInsight,
     updateInsight,
+    replaceInsights,
     overrideMethodologyRole,
     resetMethodologyRole,
     overrideMethodologyLocation,
@@ -42,7 +43,8 @@ export default function App() {
     saveApiKeyNote,
   } = useFormState()
 
-  const [splitPct, setSplitPct] = useState(DEFAULT_PCT)
+  // Fix #18: restore last used split ratio from localStorage
+  const [splitPct, setSplitPct] = useState(() => loadSplitPct(DEFAULT_PCT))
   const [isDragging, setIsDragging] = useState(false)
   const bodyRef = useRef(null)
 
@@ -55,7 +57,9 @@ export default function App() {
     if (!isDragging || !bodyRef.current) return
     const rect = bodyRef.current.getBoundingClientRect()
     const rawPct = ((e.clientX - rect.left) / rect.width) * 100
-    setSplitPct(Math.min(MAX_PCT, Math.max(MIN_PCT, rawPct)))
+    const clamped = Math.min(MAX_PCT, Math.max(MIN_PCT, rawPct))
+    setSplitPct(clamped)
+    saveSplitPct(clamped)
   }, [isDragging])
 
   const onMouseUp = useCallback(() => {
@@ -68,7 +72,9 @@ export default function App() {
     const touch = e.touches[0]
     const rect = bodyRef.current.getBoundingClientRect()
     const rawPct = ((touch.clientX - rect.left) / rect.width) * 100
-    setSplitPct(Math.min(MAX_PCT, Math.max(MIN_PCT, rawPct)))
+    const clamped = Math.min(MAX_PCT, Math.max(MIN_PCT, rawPct))
+    setSplitPct(clamped)
+    saveSplitPct(clamped)
   }, [isDragging])
 
   useEffect(() => {
@@ -89,6 +95,7 @@ export default function App() {
   // Double-click to reset to default split
   const onDoubleClick = useCallback(() => {
     setSplitPct(DEFAULT_PCT)
+    saveSplitPct(DEFAULT_PCT)
   }, [])
 
   return (
@@ -123,6 +130,7 @@ export default function App() {
           addInsight={addInsight}
           removeInsight={removeInsight}
           updateInsight={updateInsight}
+          replaceInsights={replaceInsights}
           overrideMethodologyRole={overrideMethodologyRole}
           resetMethodologyRole={resetMethodologyRole}
           overrideMethodologyLocation={overrideMethodologyLocation}

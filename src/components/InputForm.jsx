@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import ResearchSummaryTable from './ResearchSummaryTable'
 import {
   generateInterpretation,
   generateKeyInsights,
   generateRecommendations,
 } from '../utils/aiAssist'
+import { RESET_CONFIRM_MSG } from './EmailPreview'
 
 const ALL_SECTIONS = ['header', 'summary', 'interpretation', 'insights', 'methodology', 'recommendations']
 
@@ -163,12 +164,29 @@ function NoteModal({ note, onSave, onClose }) {
   const [draft, setDraft] = useState(note)
   const [mode, setMode] = useState(note ? 'preview' : 'edit')
   const [saved, setSaved] = useState(false)
+  // Fix #10: timer ref to cancel on unmount
+  const savedTimerRef = useRef(null)
+
+  // Fix #10: clean up timer on unmount
+  useEffect(() => {
+    return () => { if (savedTimerRef.current) clearTimeout(savedTimerRef.current) }
+  }, [])
+
+  // Fix #17: close on Escape key
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
 
   function handleSave() {
     onSave(draft)
     setSaved(true)
     setMode('preview')
-    setTimeout(() => setSaved(false), 2000)
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
+    savedTimerRef.current = setTimeout(() => setSaved(false), 2000)
   }
 
   return (
@@ -239,11 +257,24 @@ function AiKeyPanel({ apiKey, onSave, apiKeyNote, onSaveNote }) {
   const [showKey, setShowKey] = useState(false)
   const [saved, setSaved] = useState(false)
   const [showNote, setShowNote] = useState(false)
+  // Fix #10: timer ref to cancel on unmount
+  const savedTimerRef = useRef(null)
+
+  // Fix #10: clean up timer on unmount
+  useEffect(() => {
+    return () => { if (savedTimerRef.current) clearTimeout(savedTimerRef.current) }
+  }, [])
+
+  // Fix #16: sync draft input when apiKey prop changes (e.g. after form reset)
+  useEffect(() => {
+    setDraft(apiKey)
+  }, [apiKey])
 
   function handleSave() {
     onSave(draft.trim())
     setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
+    savedTimerRef.current = setTimeout(() => setSaved(false), 2000)
   }
 
   function handleClear() {
@@ -386,6 +417,7 @@ export default function InputForm({
   addInsight,
   removeInsight,
   updateInsight,
+  replaceInsights,
   overrideMethodologyRole,
   resetMethodologyRole,
   overrideMethodologyLocation,
@@ -435,16 +467,14 @@ export default function InputForm({
     setAiLoading(p => ({ ...p, insights: true }))
     try {
       const bullets = await generateKeyInsights(form, columns, summaryRows, apiKey)
-      // Replace insights list with AI-generated ones
-      bullets.forEach((text, idx) => {
-        if (idx < insights.length) {
-          updateInsight(insights[idx].id, text)
-        } else {
-          addInsight()
-        }
+      // Fix #4: build a complete new insights array atomically so no bullets are dropped.
+      // Reuse existing IDs where possible; allocate new IDs for extra bullets beyond current list.
+      let nextId = insights.reduce((max, i) => Math.max(max, i.id), 0) + 1
+      const newInsights = bullets.map((text, idx) => {
+        if (idx < insights.length) return { ...insights[idx], text }
+        return { id: nextId++, text }
       })
-      // Trim any extra existing insights beyond what AI returned
-      insights.slice(bullets.length).forEach(item => removeInsight(item.id))
+      replaceInsights(newInsights)
     } catch (e) {
       setAiError(e.message)
     } finally {
@@ -692,7 +722,7 @@ export default function InputForm({
         {/* Reset */}
         <div className="btn-reset-container">
           <button className="btn-reset" onClick={() => {
-            if (window.confirm('Reset all form data? This cannot be undone.')) {
+            if (window.confirm(RESET_CONFIRM_MSG)) {
               resetForm()
             }
           }}>

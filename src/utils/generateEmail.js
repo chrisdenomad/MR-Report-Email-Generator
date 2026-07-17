@@ -5,6 +5,23 @@ export const IMPORTANT_REMARKS = [
   'Figures represent market estimates, not exact headcounts or hiring guarantees.',
 ]
 
+// ── Shared helper: filter rows that have at least one filled cell ─────────────
+// Fix #6: was copy-pasted in generatePlainText, generateHTML, aiAssist, EmailPreview
+export function getFilledRows(rows, columns) {
+  return rows.filter(row => columns.some(col => row.values[col.id]?.trim()))
+}
+
+// ── HTML escape helper ────────────────────────────────────────────────────────
+// Fix #14: exported so callers (e.g. EmailPreview) can reuse; null/undefined safe
+export function escapeHtml(str) {
+  if (str == null) return ''
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
 /**
  * generatePlainText — produces a plain-text version of the email
  */
@@ -19,9 +36,7 @@ export function generatePlainText(form, columns, summaryRows, insights, subject,
   const colSeparator = columns.map(() => '─────────────').join('─┼─')
 
   // Build table rows
-  const filledRows = summaryRows.filter(row =>
-    columns.some(col => row.values[col.id]?.trim())
-  )
+  const filledRows = getFilledRows(summaryRows, columns)
   const tableRows = filledRows.length > 0
     ? filledRows.map(row =>
         '  ' + columns.map(col => row.values[col.id] || '—').join(' | ')
@@ -92,8 +107,10 @@ export function generatePlainText(form, columns, summaryRows, insights, subject,
  *  - Explicit font-family on every text element (Outlook strips inherited fonts)
  *  - No flexbox / grid — tables only for layout
  *  - mso-line-height-rule for Outlook line-height consistency
+ *
+ * Fix #11: removed unused `subject` parameter
  */
-export function generateHTML(form, columns, summaryRows, insights, subject, effectiveMethodologyRole, effectiveMethodologyLocation) {
+export function generateHTML(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation) {
   const role = form.role || '[Role]'
   const location = form.location || '[Location]'
   const recipientName = form.recipientName || ''
@@ -243,9 +260,7 @@ export function generateHTML(form, columns, summaryRows, insights, subject, effe
     .map(col => `<th style="${thStyle}">${escapeHtml(col.label || '—')}</th>`)
     .join('')
 
-  const filledRows = summaryRows.filter(row =>
-    columns.some(col => row.values[col.id]?.trim())
-  )
+  const filledRows = getFilledRows(summaryRows, columns)
 
   const tdEmptyStyle = tdStyle + ';color:#aaaaaa;'
   const tbodyHtml = filledRows.length > 0
@@ -266,13 +281,14 @@ export function generateHTML(form, columns, summaryRows, insights, subject, effe
     ? `<p style="${pStyle}">${escapeHtml(form.interpretation)}</p>`
     : ''
 
+  // Fix #5: handle both \n and \r\n (Windows line endings from pasted content)
   const recommendationsHtml = form.recommendations
-    ? escapeHtml(form.recommendations).replace(/\n/g, '<br>')
+    ? escapeHtml(form.recommendations).replace(/\r?\n/g, '<br>')
     : '[Add recommendations]'
 
-  // ── Remarks HTML ──
+  // Fix #14: IMPORTANT_REMARKS now go through escapeHtml for consistency
   const remarksHtml = IMPORTANT_REMARKS
-    .map(r => `<li style="${liStyle}">${r}</li>`)
+    .map(r => `<li style="${liStyle}">${escapeHtml(r)}</li>`)
     .join('')
 
   return `<!DOCTYPE html>
@@ -339,14 +355,4 @@ ${interpretationHtml}
 </div>
 </body>
 </html>`
-}
-
-// ── HTML escape helper ────────────────────────────────────────────────────────
-function escapeHtml(str) {
-  if (!str) return ''
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
 }

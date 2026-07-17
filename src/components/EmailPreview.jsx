@@ -1,15 +1,17 @@
-import { useState } from 'react'
-import { generatePlainText, generateHTML } from '../utils/generateEmail'
+import { useState, useEffect, useRef } from 'react'
+import { generatePlainText, generateHTML, IMPORTANT_REMARKS, getFilledRows } from '../utils/generateEmail'
 
-// Fix #31: EmailPreview owns its own .preview-panel wrapper (symmetric with InputForm)
-// B4: Detect if the form is essentially empty
+// Fix #8: shared confirm message so both reset buttons stay in sync
+export const RESET_CONFIRM_MSG = 'Reset all form data? This cannot be undone.'
+
+// Detect if the form is essentially empty
 function isFormEmpty(form, summaryRows, columns, insights) {
   const noHeader = !form.role && !form.location && !form.recipientName
-  const noSummary = !summaryRows.some(row => columns.some(col => row.values[col.id]?.trim()))
-  const noInterpretation = !form.interpretation.trim()
+  const noSummary = getFilledRows(summaryRows, columns).length === 0
+  const noInterpretation = !form.interpretation?.trim()
   const noInsights = !insights.some(i => i.text.trim())
   const noMethodology = !form.totalYearsExperience && !form.coreSkills
-  const noRecommendations = !form.recommendations.trim()
+  const noRecommendations = !form.recommendations?.trim()
   return noHeader && noSummary && noInterpretation && noInsights && noMethodology && noRecommendations
 }
 
@@ -26,32 +28,58 @@ export default function EmailPreview({
   const [toast, setToast] = useState('')
   // Fix #5: counter key so same message re-triggers animation
   const [toastKey, setToastKey] = useState(0)
+  // Fix #10: store timer ref so we can cancel it on unmount
+  const toastTimerRef = useRef(null)
+
+  // Fix #10: clean up toast timer on unmount
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    }
+  }, [])
 
   function showToast(msg) {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
     setToast(msg)
     setToastKey(k => k + 1)
-    setTimeout(() => setToast(''), 2200)
+    toastTimerRef.current = setTimeout(() => setToast(''), 2200)
   }
 
+  // Fix #2: added .catch() so clipboard failures surface to the user
   function copyPlainText() {
     const text = generatePlainText(form, columns, summaryRows, insights, subject, effectiveMethodologyRole, effectiveMethodologyLocation)
-    navigator.clipboard.writeText(text).then(() => showToast('Copied as plain text!'))
+    navigator.clipboard.writeText(text)
+      .then(() => showToast('Copied as plain text!'))
+      .catch(() => showToast('Copy failed — please copy manually.'))
   }
 
+  // Fix #2 & #3: .catch() added; Firefox fallback via execCommand when ClipboardItem unavailable
   function copyHTML() {
-    const html = generateHTML(form, columns, summaryRows, insights, subject, effectiveMethodologyRole, effectiveMethodologyLocation)
-    const blob = new Blob([html], { type: 'text/html' })
-    const item = new ClipboardItem({ 'text/html': blob })
-    navigator.clipboard.write([item]).then(() => showToast('Copied as rich HTML!'))
+    const html = generateHTML(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation)
+
+    // Modern path: ClipboardItem (Chrome, Edge, Safari)
+    if (typeof ClipboardItem !== 'undefined') {
+      const blob = new Blob([html], { type: 'text/html' })
+      const item = new ClipboardItem({ 'text/html': blob })
+      navigator.clipboard.write([item])
+        .then(() => showToast('Copied as rich HTML!'))
+        .catch(() => showToast('Copy failed — please copy manually.'))
+    } else {
+      // Firefox fallback: copy as plain text with a note
+      navigator.clipboard.writeText(html)
+        .then(() => showToast('Copied as HTML source (rich copy not supported in this browser).'))
+        .catch(() => showToast('Copy failed — please copy manually.'))
+    }
   }
 
   const role = form.role || '[Role]'
   const location = form.location || '[Location]'
   const recipientName = form.recipientName || ''
-  const filledRows = summaryRows.filter(row =>
-    columns.some(col => row.values[col.id]?.trim())
-  )
+  // Fix #6: use shared getFilledRows instead of inline filter
+  const filledRows = getFilledRows(summaryRows, columns)
   const empty = isFormEmpty(form, summaryRows, columns, insights)
+  // Fix #preview insights double-filter: compute once
+  const filledInsights = insights.filter(i => i.text.trim())
 
   return (
     // Fix #31: owns its own .preview-panel wrapper
@@ -65,7 +93,7 @@ export default function EmailPreview({
           <button
             className="btn-reset-header"
             onClick={() => {
-              if (window.confirm('Reset all form data? This cannot be undone.')) {
+              if (window.confirm(RESET_CONFIRM_MSG)) {
                 resetForm()
               }
             }}
@@ -119,7 +147,6 @@ export default function EmailPreview({
             <p className="ep-greeting">
               Hi{recipientName ? ` ${recipientName}` : ''},
             </p>
-            {/* Fix #27: use ep-intro class instead of inline style */}
             <p className="ep-intro">
               I would like to share with you the market capacity research for{' '}
               <strong>{role}</strong> in <strong>{location}</strong>.
@@ -127,7 +154,6 @@ export default function EmailPreview({
 
             {/* Research Summary */}
             <p className="ep-section-heading">Research Summary</p>
-            {/* Fix #28: shared table-scroll-wrapper class */}
             <div className="table-scroll-wrapper">
               <table className="ep-table">
                 <thead>
@@ -148,7 +174,6 @@ export default function EmailPreview({
                     ))
                   ) : (
                     <tr>
-                      {/* Fix #15: td.ep-empty gets text-align:center via CSS */}
                       <td colSpan={columns.length} className="ep-empty">
                         No data entered yet
                       </td>
@@ -168,9 +193,10 @@ export default function EmailPreview({
 
             {/* Key Insights */}
             <p className="ep-section-heading">Key Insights</p>
-            {insights.filter(i => i.text.trim()).length > 0 ? (
+            {/* Fix #preview: use pre-computed filledInsights */}
+            {filledInsights.length > 0 ? (
               <ul className="ep-bullet-list">
-                {insights.filter(i => i.text.trim()).map(item => (
+                {filledInsights.map(item => (
                   <li key={item.id}>{item.text}</li>
                 ))}
               </ul>
@@ -203,23 +229,12 @@ export default function EmailPreview({
               <p className="ep-empty">[Add recommendations]</p>
             )}
 
-            {/* Important Remarks */}
+            {/* Fix #1: Important Remarks sourced from IMPORTANT_REMARKS constant — no more duplicate hardcoding */}
             <p className="ep-section-heading">Important Remarks</p>
             <ul className="ep-bullet-list">
-              {/* Fix #9: "This dataset is based solely on..." */}
-              <li>
-                This dataset is based solely on LinkedIn database (not all professionals maintain
-                updated profiles) which align to search criteria, actual availability and expertise
-                require screening and direct engagement to identify the suitable candidates for the
-                position.
-              </li>
-              <li>
-                Results may include from NHA companies and restricted countries, in line with EPAM
-                policies for external hiring intelligence.
-              </li>
-              <li>
-                Figures represent market estimates, not exact headcounts or hiring guarantees.
-              </li>
+              {IMPORTANT_REMARKS.map((remark, i) => (
+                <li key={i}>{remark}</li>
+              ))}
             </ul>
 
           </div>

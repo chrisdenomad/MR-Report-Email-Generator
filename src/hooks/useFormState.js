@@ -1,10 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 const STORAGE_KEY = 'mr_report_form_state'
 const TEMPLATES_KEY = 'mr_report_templates'
 const API_KEY_STORAGE = 'mr_report_api_key'
 const API_KEY_NOTE_STORAGE = 'mr_report_api_key_note'
+const SPLIT_PCT_STORAGE = 'mr_report_split_pct'
 const MAX_TEMPLATES = 10
+
+// Fix #15: debounce delay for auto-save (ms)
+const SAVE_DEBOUNCE_MS = 300
 
 // ── Default columns ──────────────────────────────────────────────────────────
 const defaultColumns = [
@@ -14,8 +18,7 @@ const defaultColumns = [
 ]
 
 function makeEmptyRow(id, columns) {
-  const values = {}
-  columns.forEach(col => { values[col.id] = '' })
+  const values = Object.fromEntries(columns.map(col => [col.id, '']))
   return { id, values }
 }
 
@@ -49,47 +52,28 @@ const defaultForm = {
   recommendations: '',
 }
 
-// ── localStorage helpers ─────────────────────────────────────────────────────
-function loadFromStorage() {
+// ── Fix #9: consolidated localStorage helpers ─────────────────────────────────
+function readFromStorage(key, fallback) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
+    const raw = localStorage.getItem(key)
+    if (!raw) return fallback
     return JSON.parse(raw)
   } catch {
-    return null
+    return fallback
   }
 }
 
-function saveToStorage(state) {
+function writeToStorage(key, value) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    localStorage.setItem(key, JSON.stringify(value))
   } catch {
     // storage quota exceeded or unavailable — fail silently
   }
 }
 
-function clearStorage() {
+function removeFromStorage(key) {
   try {
-    localStorage.removeItem(STORAGE_KEY)
-  } catch {
-    // fail silently
-  }
-}
-
-// ── Template helpers ─────────────────────────────────────────────────────────
-function loadTemplates() {
-  try {
-    const raw = localStorage.getItem(TEMPLATES_KEY)
-    if (!raw) return []
-    return JSON.parse(raw)
-  } catch {
-    return []
-  }
-}
-
-function saveTemplates(templates) {
-  try {
-    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(templates))
+    localStorage.removeItem(key)
   } catch {
     // fail silently
   }
@@ -97,7 +81,7 @@ function saveTemplates(templates) {
 
 // ── Restore or fall back to defaults ────────────────────────────────────────
 function getInitialState() {
-  const saved = loadFromStorage()
+  const saved = readFromStorage(STORAGE_KEY, null)
   if (!saved) {
     return {
       form: { ...defaultForm },
@@ -114,19 +98,25 @@ function getInitialState() {
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
 export function useFormState() {
-  const initial = getInitialState()
+  // Fix #12: lazy initializer — getInitialState() runs only once, not on every render
+  const [form, setForm] = useState(() => getInitialState().form)
+  const [columns, setColumns] = useState(() => getInitialState().columns)
+  const [summaryRows, setSummaryRows] = useState(() => getInitialState().summaryRows)
+  const [nextRowId, setNextRowId] = useState(() => getInitialState().nextRowId)
+  const [nextColId, setNextColId] = useState(() => getInitialState().nextColId)
+  const [insights, setInsights] = useState(() => getInitialState().insights)
+  const [nextInsightId, setNextInsightId] = useState(() => getInitialState().nextInsightId)
 
-  const [form, setForm] = useState(initial.form)
-  const [columns, setColumns] = useState(initial.columns)
-  const [summaryRows, setSummaryRows] = useState(initial.summaryRows)
-  const [nextRowId, setNextRowId] = useState(initial.nextRowId)
-  const [nextColId, setNextColId] = useState(initial.nextColId)
-  const [insights, setInsights] = useState(initial.insights)
-  const [nextInsightId, setNextInsightId] = useState(initial.nextInsightId)
-
-  // ── Auto-save on every change ──
+  // Fix #15: debounce auto-save — only write to localStorage after SAVE_DEBOUNCE_MS of inactivity
+  const saveTimerRef = useRef(null)
   useEffect(() => {
-    saveToStorage({ form, columns, summaryRows, nextRowId, nextColId, insights, nextInsightId })
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(() => {
+      writeToStorage(STORAGE_KEY, { form, columns, summaryRows, nextRowId, nextColId, insights, nextInsightId })
+    }, SAVE_DEBOUNCE_MS)
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    }
   }, [form, columns, summaryRows, nextRowId, nextColId, insights, nextInsightId])
 
   // ── Form ──
@@ -148,8 +138,7 @@ export function useFormState() {
   function addSummaryRow() {
     setSummaryRows(prev => {
       const colIds = Object.keys(prev[0]?.values ?? {})
-      const values = {}
-      colIds.forEach(id => { values[id] = '' })
+      const values = Object.fromEntries(colIds.map(id => [id, '']))
       return [...prev, { id: nextRowId, values }]
     })
     setNextRowId(n => n + 1)
@@ -177,9 +166,8 @@ export function useFormState() {
     setColumns(prev => prev.filter(col => col.id !== colId))
     setSummaryRows(prev =>
       prev.map(row => {
-        const values = { ...row.values }
-        delete values[colId]
-        return { ...row, values }
+        const { [colId]: _, ...rest } = row.values
+        return { ...row, values: rest }
       })
     )
   }
@@ -204,6 +192,13 @@ export function useFormState() {
     setInsights(prev =>
       prev.map(item => (item.id === id ? { ...item, text } : item))
     )
+  }
+
+  // Fix #4: atomic replacement of all insights at once (used by AI insights handler)
+  function replaceInsights(newInsights) {
+    const maxId = newInsights.reduce((max, i) => Math.max(max, i.id), 0)
+    setInsights(newInsights)
+    setNextInsightId(maxId + 1)
   }
 
   // ── Methodology overrides ──
@@ -232,6 +227,7 @@ export function useFormState() {
   }
 
   // ── Reset ──
+  // Note: only clears form state — templates and API key are preserved intentionally
   function resetForm() {
     setForm({ ...defaultForm })
     setColumns(defaultColumns.map(c => ({ ...c })))
@@ -240,7 +236,7 @@ export function useFormState() {
     setNextColId(defaultColumns.length + 1)
     setInsights(defaultInsights.map(i => ({ ...i })))
     setNextInsightId(defaultInsights.length + 1)
-    clearStorage()
+    removeFromStorage(STORAGE_KEY)
   }
 
   // ── Bulk restore (used by template loader) ──
@@ -255,7 +251,7 @@ export function useFormState() {
   }
 
   // ── Templates ──
-  const [templates, setTemplates] = useState(() => loadTemplates())
+  const [templates, setTemplates] = useState(() => readFromStorage(TEMPLATES_KEY, []))
 
   // ── API Key (persisted separately, never in form snapshots) ──
   const [apiKey, setApiKeyState] = useState(() => {
@@ -265,36 +261,35 @@ export function useFormState() {
   function saveApiKey(key) {
     const trimmed = key.trim()
     setApiKeyState(trimmed)
-    try {
-      if (trimmed) { localStorage.setItem(API_KEY_STORAGE, trimmed) }
-      else { localStorage.removeItem(API_KEY_STORAGE) }
-    } catch {
-      // fail silently
+    if (trimmed) {
+      writeToStorage(API_KEY_STORAGE, trimmed)
+    } else {
+      removeFromStorage(API_KEY_STORAGE)
     }
   }
 
-  // ── API Key Note (editable note displayed to teammates) ──
+  // ── API Key Note ──
   const [apiKeyNote, setApiKeyNoteState] = useState(() => {
     try { return localStorage.getItem(API_KEY_NOTE_STORAGE) || '' } catch { return '' }
   })
 
   function saveApiKeyNote(text) {
     setApiKeyNoteState(text)
-    try {
-      if (text.trim()) { localStorage.setItem(API_KEY_NOTE_STORAGE, text) }
-      else { localStorage.removeItem(API_KEY_NOTE_STORAGE) }
-    } catch {
-      // fail silently
+    if (text.trim()) {
+      writeToStorage(API_KEY_NOTE_STORAGE, text)
+    } else {
+      removeFromStorage(API_KEY_NOTE_STORAGE)
     }
   }
 
   function saveTemplate(name) {
     if (!name.trim()) return
+    const trimmedName = name.trim()
     const snapshot = { form, columns, summaryRows, nextRowId, nextColId, insights, nextInsightId }
     setTemplates(prev => {
-      const filtered = prev.filter(t => t.name !== name.trim())
-      const updated = [{ name: name.trim(), snapshot, savedAt: Date.now() }, ...filtered].slice(0, MAX_TEMPLATES)
-      saveTemplates(updated)
+      const filtered = prev.filter(t => t.name !== trimmedName)
+      const updated = [{ name: trimmedName, snapshot, savedAt: Date.now() }, ...filtered].slice(0, MAX_TEMPLATES)
+      writeToStorage(TEMPLATES_KEY, updated)
       return updated
     })
   }
@@ -302,7 +297,7 @@ export function useFormState() {
   function deleteTemplate(name) {
     setTemplates(prev => {
       const updated = prev.filter(t => t.name !== name)
-      saveTemplates(updated)
+      writeToStorage(TEMPLATES_KEY, updated)
       return updated
     })
   }
@@ -335,6 +330,7 @@ export function useFormState() {
     addInsight,
     removeInsight,
     updateInsight,
+    replaceInsights,
     overrideMethodologyRole,
     resetMethodologyRole,
     overrideMethodologyLocation,
@@ -350,4 +346,13 @@ export function useFormState() {
     apiKeyNote,
     saveApiKeyNote,
   }
+}
+
+// ── Fix #18: exported helpers for splitPct persistence (used by App.jsx) ──────
+export function loadSplitPct(defaultPct) {
+  return readFromStorage(SPLIT_PCT_STORAGE, defaultPct)
+}
+
+export function saveSplitPct(pct) {
+  writeToStorage(SPLIT_PCT_STORAGE, pct)
 }
