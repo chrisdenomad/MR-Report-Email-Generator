@@ -25,21 +25,10 @@ const CLOSING_LINE_EXAMPLES = [
 ]
 
 // ── LineFieldWithExamples ─────────────────────────────────────────────────────
-// A text input with a collapsible "Examples" dropdown that lets the user
-// pick a preset or keep typing their own value.
+// A text input with an inline (non-absolute) examples list that expands
+// below the input — avoids all overflow:hidden clipping from parent containers.
 function LineFieldWithExamples({ id, label, value, onChange, examples, hint }) {
   const [open, setOpen] = useState(false)
-  const wrapRef = useRef(null)
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    if (!open) return
-    function handleClick(e) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [open])
 
   function pick(example) {
     onChange(example)
@@ -47,7 +36,7 @@ function LineFieldWithExamples({ id, label, value, onChange, examples, hint }) {
   }
 
   return (
-    <div className="form-group line-field-wrap" ref={wrapRef}>
+    <div className="form-group line-field-wrap">
       <div className="field-label-row">
         <label htmlFor={id}>
           {label}
@@ -55,7 +44,7 @@ function LineFieldWithExamples({ id, label, value, onChange, examples, hint }) {
         </label>
         <button
           type="button"
-          className="btn-examples-toggle"
+          className={`btn-examples-toggle${open ? ' active' : ''}`}
           onClick={() => setOpen(o => !o)}
           aria-expanded={open}
           title="Show example phrases"
@@ -66,6 +55,7 @@ function LineFieldWithExamples({ id, label, value, onChange, examples, hint }) {
             <line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
           Examples
+          <span className="examples-chevron" style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
         </button>
       </div>
       <input
@@ -75,20 +65,17 @@ function LineFieldWithExamples({ id, label, value, onChange, examples, hint }) {
         onChange={e => onChange(e.target.value)}
         placeholder={examples[0]}
       />
+      {/* Inline list — no position:absolute, never clipped by overflow:hidden parents */}
       {open && (
-        <ul className="examples-dropdown" role="listbox" aria-label={`${label} examples`}>
+        <ul className="examples-list">
           {examples.map((ex, i) => (
             <li
               key={i}
               className={`examples-option${value === ex ? ' selected' : ''}`}
-              role="option"
-              aria-selected={value === ex}
-              // Fix: use onMouseDown + preventDefault so the outside-click handler
-              // (which listens to mousedown) does not fire and close the dropdown
-              // before this selection is applied.
               onMouseDown={e => { e.preventDefault(); pick(ex) }}
               title={ex}
             >
+              {value === ex && <span className="examples-check">✓</span>}
               {ex}
             </li>
           ))}

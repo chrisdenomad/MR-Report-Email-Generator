@@ -1101,7 +1101,7 @@ td.ep-empty {
 
 /* ── LineFieldWithExamples ── */
 .line-field-wrap {
-  position: relative;
+  /* no position:relative needed — list is inline, not absolute */
 }
 
 .btn-examples-toggle {
@@ -1120,54 +1120,56 @@ td.ep-empty {
   white-space: nowrap;
 }
 
-.btn-examples-toggle:hover {
+.btn-examples-toggle:hover,
+.btn-examples-toggle.active {
   border-color: var(--accent);
   color: var(--accent);
 }
 
-.examples-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  z-index: 200;
-  background: var(--bg-panel, #1e1e1e);
+.examples-chevron {
+  font-size: 10px;
+  display: inline-block;
+  transition: transform 0.2s ease;
+  margin-left: 1px;
+}
+
+/* Inline list — renders in normal flow, never clipped by overflow:hidden parents */
+.examples-list {
+  list-style: none;
+  margin: 6px 0 4px;
+  padding: 4px;
+  background: var(--bg-input, #2a2a2a);
   border: 1px solid var(--border);
   border-radius: 7px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.35);
-  list-style: none;
-  margin: 0;
-  padding: 4px;
-  max-height: 260px;
-  overflow-y: auto;
 }
 
 .examples-option {
-  padding: 8px 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 7px 10px;
   font-size: 12px;
   color: var(--text-secondary);
   border-radius: 5px;
   cursor: pointer;
   line-height: 1.5;
   transition: background 0.12s, color 0.12s;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .examples-option:hover {
-  background: var(--bg-hover, rgba(255,255,255,0.07));
+  background: rgba(255,255,255,0.07);
   color: var(--text-primary);
 }
 
 .examples-option.selected {
   color: var(--accent);
-  background: var(--bg-hover, rgba(255,255,255,0.05));
 }
 
-.examples-option.selected::before {
-  content: '✓ ';
+.examples-check {
   font-size: 10px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--accent);
 }
 
 .insights-list-header {
