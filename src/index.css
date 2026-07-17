@@ -792,41 +792,66 @@ body {
   animation: toastFade 2.2s ease forwards;
 }
 
-/* ── Email Subject Bar ── */
-.email-subject-bar {
+/* ── Email Client Header (#1) ── */
+.email-client-header {
   background: var(--bg-card);
-  border-radius: 6px;
-  padding: 10px 14px;
-  margin-bottom: 16px;
-  font-size: 12px;
-  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px 8px 0 0;
+  border-bottom: none;
+  font-size: 12.5px;
+  overflow: hidden;
+}
+
+.email-client-row {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 10px;
+  padding: 7px 16px;
+  border-bottom: 1px solid var(--border-color);
 }
 
-.email-subject-bar strong {
-  color: var(--text-label);
+.email-client-row:last-child {
+  border-bottom: none;
+}
+
+.email-client-label {
+  min-width: 52px;
   font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.7px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
 }
 
-.email-subject-bar span {
+.email-client-value {
   color: var(--text-primary);
-  font-weight: 600;
+  font-size: 12.5px;
+}
+
+.email-client-subject-row {
+  background: var(--bg-secondary);
+}
+
+.email-client-subject {
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 13px;
 }
 
 /* ── Email Preview Box ── */
 .email-preview-box {
   background: #ffffff;
   color: #1a1a1a;
-  border-radius: 8px;
-  padding: 28px 32px;
+  border-radius: 0 0 8px 8px;
+  border: 1px solid var(--border-color);
+  border-top: none;
+  padding: 24px 28px 28px;
   font-family: Arial, sans-serif;
   font-size: 14px;
   line-height: 1.6;
   box-shadow: var(--shadow);
+  margin-bottom: 8px;
 }
 
 .ep-greeting {
@@ -840,14 +865,18 @@ body {
   font-size: 14px;
 }
 
-/* Fix #A2: Better contrast on white background */
+/* Fix #A2: Section headings with left accent border (#2) */
 .ep-section-heading {
   font-weight: 700;
-  font-size: 13px;
-  color: #4a3f00;
+  font-size: 11px;
+  color: #2d7a5f;
   text-transform: uppercase;
-  margin: 20px 0 8px 0;
-  letter-spacing: 0.4px;
+  margin: 22px 0 8px 0;
+  letter-spacing: 0.6px;
+  padding: 5px 8px;
+  border-left: 3px solid #46B28E;
+  background: #f0faf6;
+  border-radius: 0 4px 4px 0;
 }
 
 .ep-table {
@@ -858,16 +887,30 @@ body {
 }
 
 .ep-table th {
-  background: #f0f0f0;
+  background: #e8f5f0;
   font-weight: 700;
-  padding: 6px 10px;
+  padding: 7px 10px;
   text-align: left;
-  border: 1px solid #ccc;
+  border: 1px solid #c8e6dc;
+  color: #1a4a3a;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .ep-table td {
-  padding: 5px 10px;
-  border: 1px solid #ccc;
+  padding: 6px 10px;
+  border: 1px solid #ddeee8;
+  font-size: 13px;
+}
+
+/* Zebra striping (#3) */
+.ep-table tbody tr:nth-child(even) td {
+  background: #f5fbf8;
+}
+
+.ep-table tbody tr:hover td {
+  background: #e8f5f0;
 }
 
 .ep-chart-placeholder {
@@ -901,6 +944,15 @@ body {
   color: #aaa;
   font-style: italic;
   font-size: 13px;
+}
+
+/* #5: Inline empty placeholders — dashed amber to signal "fill me in" */
+.ep-empty-inline {
+  color: #b45309;
+  font-style: italic;
+  font-size: 13px;
+  border-bottom: 1px dashed #b45309;
+  opacity: 0.8;
 }
 
 td.ep-empty {

@@ -134,10 +134,22 @@ export default function EmailPreview({
         </div>
       ) : (
         <div className="preview-panel-body">
-          {/* Subject line */}
-          <div className="email-subject-bar">
-            <strong>Subject</strong>
-            <span>{subject}</span>
+          {/* Email client header — From / To / Subject */}
+          <div className="email-client-header">
+            <div className="email-client-row">
+              <span className="email-client-label">From</span>
+              <span className="email-client-value">Market Research &lt;mr@epam.com&gt;</span>
+            </div>
+            <div className="email-client-row">
+              <span className="email-client-label">To</span>
+              <span className="email-client-value">
+                {recipientName || <span className="ep-empty-inline">[Recipient Name]</span>}
+              </span>
+            </div>
+            <div className="email-client-row email-client-subject-row">
+              <span className="email-client-label">Subject</span>
+              <span className="email-client-subject">{subject}</span>
+            </div>
           </div>
 
           {/* Email body */}
@@ -212,17 +224,17 @@ export default function EmailPreview({
             {/* Search Methodology */}
             <p className="ep-section-heading">Search Methodology</p>
             <ul className="ep-bullet-list">
-              <li><strong>Role:</strong> {effectiveMethodologyRole || <span className="ep-empty">[Add role]</span>}</li>
+              <li><strong>Role:</strong> {effectiveMethodologyRole || <span className="ep-empty-inline">[Add role]</span>}</li>
               <li><strong>Search Platform:</strong> LinkedIn (visible profiles only)</li>
-              <li><strong>Location:</strong> {effectiveMethodologyLocation || <span className="ep-empty">[Add location]</span>}</li>
+              <li><strong>Location:</strong> {effectiveMethodologyLocation || <span className="ep-empty-inline">[Add location]</span>}</li>
               <li><strong>Excluded Company:</strong> EPAM</li>
               <li>
                 <strong>Total Years of Experience:</strong>{' '}
-                {form.totalYearsExperience || <span className="ep-empty">[Add]</span>}
+                {form.totalYearsExperience || <span className="ep-empty-inline">[Add]</span>}
               </li>
               <li>
                 <strong>Core Skills/Keyword:</strong>{' '}
-                {form.coreSkills || <span className="ep-empty">[Add]</span>}
+                {form.coreSkills || <span className="ep-empty-inline">[Add]</span>}
               </li>
             </ul>
 
