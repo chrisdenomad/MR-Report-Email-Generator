@@ -1,3 +1,93 @@
+import { useState } from 'react'
+
+// ── Cell renderer — plain input or select (with optional custom text fallback) ──
+function CellInput({ colId, rowId, value, label, rowIndex, colType, onUpdateCell }) {
+  // Track whether "Other..." custom input is active for this cell
+  const [customActive, setCustomActive] = useState(
+    colType?.type === 'select' && colType?.allowCustom
+      ? !['', ...colType.options].includes(value)
+      : false
+  )
+
+  if (!colType || colType.type !== 'select') {
+    return (
+      <input
+        type="text"
+        value={value}
+        placeholder="—"
+        aria-label={`${label || 'Column'} row ${rowIndex + 1}`}
+        onChange={e => onUpdateCell(rowId, colId, e.target.value)}
+      />
+    )
+  }
+
+  // Select cell — with optional "Other…" custom text fallback
+  const isCustom = colType.allowCustom && customActive
+  const selectValue = isCustom ? '__custom__' : (value || '')
+
+  function handleSelectChange(e) {
+    if (colType.allowCustom && e.target.value === '__custom__') {
+      setCustomActive(true)
+      onUpdateCell(rowId, colId, '')
+    } else {
+      setCustomActive(false)
+      onUpdateCell(rowId, colId, e.target.value)
+    }
+  }
+
+  function handleCustomChange(e) {
+    onUpdateCell(rowId, colId, e.target.value)
+  }
+
+  function handleCustomBlur() {
+    // If the user cleared the custom input, fall back to select
+    if (!value.trim()) {
+      setCustomActive(false)
+    }
+  }
+
+  return (
+    <div className="cell-select-wrap">
+      {!isCustom && (
+        <select
+          value={selectValue}
+          aria-label={`${label || 'Column'} row ${rowIndex + 1}`}
+          onChange={handleSelectChange}
+          className="cell-select"
+        >
+          <option value="">—</option>
+          {colType.options.map(opt => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+          {colType.allowCustom && (
+            <option value="__custom__">Other…</option>
+          )}
+        </select>
+      )}
+      {isCustom && (
+        <div className="cell-custom-wrap">
+          <input
+            type="text"
+            value={value}
+            placeholder="Type value…"
+            aria-label={`${label || 'Column'} row ${rowIndex + 1} (custom)`}
+            className="cell-custom-input"
+            autoFocus
+            onChange={handleCustomChange}
+            onBlur={handleCustomBlur}
+          />
+          <button
+            type="button"
+            className="btn-custom-back"
+            title="Back to dropdown"
+            onClick={() => { setCustomActive(false); onUpdateCell(rowId, colId, '') }}
+          >↩</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function ResearchSummaryTable({
   columns,
   rows,
@@ -7,6 +97,7 @@ export default function ResearchSummaryTable({
   onAddColumn,
   onRemoveColumn,
   onUpdateColumnLabel,
+  columnTypes = {},
 }) {
   return (
     <div>
@@ -53,13 +144,14 @@ export default function ResearchSummaryTable({
               <tr key={row.id}>
                 {columns.map(col => (
                   <td key={col.id}>
-                    {/* Fix #20: aria-label on cell inputs */}
-                    <input
-                      type="text"
+                    <CellInput
+                      colId={col.id}
+                      rowId={row.id}
                       value={row.values[col.id] ?? ''}
-                      placeholder="—"
-                      aria-label={`${col.label || 'Column'} row ${rowIndex + 1}`}
-                      onChange={e => onUpdateCell(row.id, col.id, e.target.value)}
+                      label={col.label}
+                      rowIndex={rowIndex}
+                      colType={columnTypes[col.id]}
+                      onUpdateCell={onUpdateCell}
                     />
                   </td>
                 ))}

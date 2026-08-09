@@ -3,12 +3,20 @@ import ResearchSummaryTable from './ResearchSummaryTable'
 import { RESET_CONFIRM_MSG } from './EmailPreview'
 
 // ── Preset examples for opening & closing lines ───────────────────────────────
-const OPENING_LINE_EXAMPLES = [
+const CAPACITY_OPENING_LINE_EXAMPLES = [
   'I would like to share with you the market capacity research for [Role] in [Location].',
   'As requested, here is the market capacity research for [Role] in [Location].',
   'Please find below the market capacity research for [Role] positions in [Location].',
   'I wanted to share the latest talent market insights for [Role] in [Location].',
   'Here is an overview of the available talent pool for [Role] in [Location].',
+]
+
+const SALARY_OPENING_LINE_EXAMPLES = [
+  'I would like to share with you the salary benchmark research for [Role] in [Location].',
+  'As requested, here is the salary benchmark data for [Role] in [Location].',
+  'Please find below the salary benchmark research for [Role] positions in [Location].',
+  'I wanted to share the latest compensation insights for [Role] in [Location].',
+  'Here is an overview of the salary benchmark for [Role] in [Location].',
 ]
 
 const CLOSING_LINE_EXAMPLES = [
@@ -19,9 +27,18 @@ const CLOSING_LINE_EXAMPLES = [
   'Looking forward to your feedback and happy to refine the search further.',
 ]
 
+// ── Salary column type definitions ────────────────────────────────────────────
+const SENIORITY_OPTIONS = ['A1','A2','A3','B1','B2','B3','C1','C2','C3','D1','D2','D3']
+const BASIS_OPTIONS = ['Monthly', 'Yearly']
+const CURRENCY_OPTIONS = ['USD','VND','PLN','HKD','AUD','JPY','MYR','SGD','CNY']
+
+const SALARY_COLUMN_TYPES = {
+  scol3: { type: 'select', options: SENIORITY_OPTIONS },
+  scol6: { type: 'select', options: BASIS_OPTIONS },
+  scol7: { type: 'select', options: CURRENCY_OPTIONS, allowCustom: true },
+}
+
 // ── LineFieldWithExamples ─────────────────────────────────────────────────────
-// A text input with an inline (non-absolute) examples list that expands
-// below the input — avoids all overflow:hidden clipping from parent containers.
 function LineFieldWithExamples({ id, label, value, onChange, examples, hint }) {
   const [open, setOpen] = useState(false)
 
@@ -60,7 +77,6 @@ function LineFieldWithExamples({ id, label, value, onChange, examples, hint }) {
         onChange={e => onChange(e.target.value)}
         placeholder={examples[0]}
       />
-      {/* Inline list — no position:absolute, never clipped by overflow:hidden parents */}
       {open && (
         <ul className="examples-list">
           {examples.map((ex, i) => (
@@ -80,19 +96,91 @@ function LineFieldWithExamples({ id, label, value, onChange, examples, hint }) {
   )
 }
 
+// ── Research type switcher ────────────────────────────────────────────────────
+function ResearchTypeSwitcher({ current, onSwitch }) {
+  // pendingType: set when user clicks the other type, triggers inline confirm
+  const [pendingType, setPendingType] = useState(null)
+
+  function handleClick(type) {
+    if (type === current) return
+    setPendingType(type)
+  }
+
+  function handleKeep() {
+    onSwitch(pendingType, true)
+    setPendingType(null)
+  }
+
+  function handleReset() {
+    onSwitch(pendingType, false)
+    setPendingType(null)
+  }
+
+  function handleCancel() {
+    setPendingType(null)
+  }
+
+  return (
+    <div className="research-type-switcher">
+      <div className="research-type-toggle">
+        <button
+          type="button"
+          className={`btn-research-type${current === 'capacity' ? ' active' : ''}`}
+          onClick={() => handleClick('capacity')}
+        >
+          Market Capacity
+        </button>
+        <button
+          type="button"
+          className={`btn-research-type${current === 'salary' ? ' active' : ''}`}
+          onClick={() => handleClick('salary')}
+        >
+          Salary Benchmark
+        </button>
+      </div>
+
+      {pendingType && (
+        <div className="switch-confirm">
+          <span className="switch-confirm-text">
+            Switching to <strong>{pendingType === 'salary' ? 'Salary Benchmark' : 'Market Capacity'}</strong>. What about the table?
+          </span>
+          <div className="switch-confirm-actions">
+            <button type="button" className="btn-switch-reset" onClick={handleReset}>
+              Reset to new defaults
+            </button>
+            <button type="button" className="btn-switch-keep" onClick={handleKeep}>
+              Keep existing data
+            </button>
+            <button type="button" className="btn-switch-cancel" onClick={handleCancel} aria-label="Cancel">
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const ALL_SECTIONS = ['header', 'summary', 'interpretation', 'insights', 'methodology', 'recommendations']
 
-// Compute how many sections have content
+// Compute how many relevant sections have content — varies by research type
 function useProgress(form, summaryRows, columns, insights) {
   return useMemo(() => {
-    const filled = [
-      !!(form.role || form.location || form.recipientName),
-      summaryRows.some(row => columns.some(col => row.values[col.id]?.trim())),
-      !!form.interpretation.trim(),
-      insights.some(i => i.text.trim()),
-      !!(form.totalYearsExperience || form.coreSkills),
-      !!form.recommendations.trim(),
-    ]
+    const isSalary = form.researchType === 'salary'
+    const filled = isSalary
+      ? [
+          !!(form.role || form.location || form.recipientName),
+          summaryRows.some(row => columns.some(col => row.values[col.id]?.trim())),
+          !!form.recommendations.trim(),
+        ]
+      : [
+          !!(form.role || form.location || form.recipientName),
+          summaryRows.some(row => columns.some(col => row.values[col.id]?.trim())),
+          !!form.interpretation.trim(),
+          insights.some(i => i.text.trim()),
+          !!(form.totalYearsExperience || form.coreSkills),
+          !!form.recommendations.trim(),
+        ]
     const count = filled.filter(Boolean).length
     return { count, total: filled.length, pct: Math.round((count / filled.length) * 100) }
   }, [form, summaryRows, columns, insights])
@@ -156,7 +244,6 @@ function TemplatesPanel({ templates, onSave, onLoad, onDelete }) {
 
       {open && (
         <div className="templates-body">
-          {/* Save current as template */}
           <div className="templates-save-row">
             <input
               type="text"
@@ -176,7 +263,6 @@ function TemplatesPanel({ templates, onSave, onLoad, onDelete }) {
             </button>
           </div>
 
-          {/* Saved templates list */}
           {templates.length === 0 ? (
             <p className="templates-empty">No saved templates yet.</p>
           ) : (
@@ -234,6 +320,7 @@ export default function InputForm({
   overrideMethodologyLocation,
   resetMethodologyLocation,
   resetForm,
+  switchResearchType,
   templates,
   saveTemplate,
   deleteTemplate,
@@ -252,6 +339,11 @@ export default function InputForm({
   function isOpen(id) { return openSections.has(id) }
 
   const progress = useProgress(form, summaryRows, columns, insights)
+
+  const isSalary = form.researchType === 'salary'
+  const openingLineExamples = isSalary ? SALARY_OPENING_LINE_EXAMPLES : CAPACITY_OPENING_LINE_EXAMPLES
+  // columnTypes only applies in salary mode — capacity table uses plain text everywhere
+  const activeColumnTypes = isSalary ? SALARY_COLUMN_TYPES : {}
 
   return (
     <div className="form-panel" style={style}>
@@ -315,13 +407,19 @@ export default function InputForm({
             label="Opening line"
             value={form.openingLine}
             onChange={val => updateField('openingLine', val)}
-            examples={OPENING_LINE_EXAMPLES}
+            examples={openingLineExamples}
             hint="[Role] & [Location] auto-filled"
           />
         </Section>
 
         {/* ── Research Summary ── */}
         <Section id="summary" title="Research Summary" isOpen={isOpen} onToggle={toggleSection}>
+          {/* Research type switcher */}
+          <ResearchTypeSwitcher
+            current={form.researchType || 'capacity'}
+            onSwitch={switchResearchType}
+          />
+
           <ResearchSummaryTable
             columns={columns}
             rows={summaryRows}
@@ -331,6 +429,7 @@ export default function InputForm({
             onAddColumn={addColumn}
             onRemoveColumn={removeColumn}
             onUpdateColumnLabel={updateColumnLabel}
+            columnTypes={activeColumnTypes}
           />
           {/* Content suggestion #5: chart placeholder toggle */}
           <div className="form-group chart-toggle-row">
@@ -345,111 +444,117 @@ export default function InputForm({
           </div>
         </Section>
 
-        {/* ── Interpretation ── */}
-        <Section id="interpretation" title="Interpretation" isOpen={isOpen} onToggle={toggleSection}>
-          <div className="form-group">
-            <label htmlFor="field-interpretation">Interpretation sentence</label>
-            <textarea
-              id="field-interpretation"
-              rows={3}
-              value={form.interpretation}
-              placeholder='e.g. "The market shows strong Senior-level depth, with moderate scarcity at Architect level."'
-              onChange={e => updateField('interpretation', e.target.value)}
-            />
-          </div>
-        </Section>
+        {/* ── Interpretation — capacity only ── */}
+        {!isSalary && (
+          <Section id="interpretation" title="Interpretation" isOpen={isOpen} onToggle={toggleSection}>
+            <div className="form-group">
+              <label htmlFor="field-interpretation">Interpretation sentence</label>
+              <textarea
+                id="field-interpretation"
+                rows={3}
+                value={form.interpretation}
+                placeholder='e.g. "The market shows strong Senior-level depth, with moderate scarcity at Architect level."'
+                onChange={e => updateField('interpretation', e.target.value)}
+              />
+            </div>
+          </Section>
+        )}
 
-        {/* ── Key Insights ── */}
-        <Section id="insights" title="Key Insights" isOpen={isOpen} onToggle={toggleSection}>
-          <div className="insights-list">
-            {insights.map((item, index) => (
-              <div key={item.id} className="insight-row">
-                <span className="insight-bullet" aria-hidden="true">•</span>
+        {/* ── Key Insights — capacity only ── */}
+        {!isSalary && (
+          <Section id="insights" title="Key Insights" isOpen={isOpen} onToggle={toggleSection}>
+            <div className="insights-list">
+              {insights.map((item, index) => (
+                <div key={item.id} className="insight-row">
+                  <span className="insight-bullet" aria-hidden="true">•</span>
+                  <input
+                    type="text"
+                    className="insight-input"
+                    id={`field-insight-${item.id}`}
+                    aria-label={`Key insight ${index + 1}`}
+                    value={item.text}
+                    placeholder={`Insight ${index + 1}`}
+                    onChange={e => updateInsight(item.id, e.target.value)}
+                  />
+                  <button
+                    className="btn-remove-row"
+                    onClick={() => removeInsight(item.id)}
+                    aria-label={`Remove insight ${index + 1}`}
+                    title="Remove insight"
+                    disabled={insights.length === 1}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button className="btn-add-row insights-add-btn" onClick={addInsight}>
+              + Add Insight
+            </button>
+          </Section>
+        )}
+
+        {/* ── Search Methodology — capacity only ── */}
+        {!isSalary && (
+          <Section id="methodology" title="Search Methodology" isOpen={isOpen} onToggle={toggleSection}>
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="field-methodologyRole">
+                  Role
+                  {form.methodologyRoleOverridden
+                    ? <button className="btn-sync-reset" onClick={resetMethodologyRole} title="Reset to header value">↺ sync</button>
+                    : <span className="synced-badge">synced</span>
+                  }
+                </label>
                 <input
+                  id="field-methodologyRole"
                   type="text"
-                  className="insight-input"
-                  id={`field-insight-${item.id}`}
-                  aria-label={`Key insight ${index + 1}`}
-                  value={item.text}
-                  placeholder={`Insight ${index + 1}`}
-                  onChange={e => updateInsight(item.id, e.target.value)}
+                  value={effectiveMethodologyRole}
+                  placeholder={form.role || 'Auto-filled from Role field'}
+                  onChange={e => overrideMethodologyRole(e.target.value)}
                 />
-                <button
-                  className="btn-remove-row"
-                  onClick={() => removeInsight(item.id)}
-                  aria-label={`Remove insight ${index + 1}`}
-                  title="Remove insight"
-                  disabled={insights.length === 1}
-                >
-                  ×
-                </button>
               </div>
-            ))}
-          </div>
-          <button className="btn-add-row insights-add-btn" onClick={addInsight}>
-            + Add Insight
-          </button>
-        </Section>
-
-        {/* ── Search Methodology ── */}
-        <Section id="methodology" title="Search Methodology" isOpen={isOpen} onToggle={toggleSection}>
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="field-methodologyRole">
-                Role
-                {form.methodologyRoleOverridden
-                  ? <button className="btn-sync-reset" onClick={resetMethodologyRole} title="Reset to header value">↺ sync</button>
-                  : <span className="synced-badge">synced</span>
-                }
-              </label>
-              <input
-                id="field-methodologyRole"
-                type="text"
-                value={effectiveMethodologyRole}
-                placeholder={form.role || 'Auto-filled from Role field'}
-                onChange={e => overrideMethodologyRole(e.target.value)}
-              />
+              <div className="form-group">
+                <label htmlFor="field-methodologyLocation">
+                  Location
+                  {form.methodologyLocationOverridden
+                    ? <button className="btn-sync-reset" onClick={resetMethodologyLocation} title="Reset to header value">↺ sync</button>
+                    : <span className="synced-badge">synced</span>
+                  }
+                </label>
+                <input
+                  id="field-methodologyLocation"
+                  type="text"
+                  value={effectiveMethodologyLocation}
+                  placeholder={form.location || 'Auto-filled from Location field'}
+                  onChange={e => overrideMethodologyLocation(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="field-experience">Total Years of Experience</label>
+                <input
+                  id="field-experience"
+                  type="text"
+                  value={form.totalYearsExperience}
+                  placeholder="e.g. 5+ years"
+                  onChange={e => updateField('totalYearsExperience', e.target.value)}
+                />
+              </div>
             </div>
             <div className="form-group">
-              <label htmlFor="field-methodologyLocation">
-                Location
-                {form.methodologyLocationOverridden
-                  ? <button className="btn-sync-reset" onClick={resetMethodologyLocation} title="Reset to header value">↺ sync</button>
-                  : <span className="synced-badge">synced</span>
-                }
-              </label>
+              <label htmlFor="field-coreSkills">Core Skills / Keywords</label>
               <input
-                id="field-methodologyLocation"
+                id="field-coreSkills"
                 type="text"
-                value={effectiveMethodologyLocation}
-                placeholder={form.location || 'Auto-filled from Location field'}
-                onChange={e => overrideMethodologyLocation(e.target.value)}
+                value={form.coreSkills}
+                placeholder="e.g. Java, Spring Boot, Microservices"
+                onChange={e => updateField('coreSkills', e.target.value)}
               />
             </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="field-experience">Total Years of Experience</label>
-              <input
-                id="field-experience"
-                type="text"
-                value={form.totalYearsExperience}
-                placeholder="e.g. 5+ years"
-                onChange={e => updateField('totalYearsExperience', e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="form-group">
-            <label htmlFor="field-coreSkills">Core Skills / Keywords</label>
-            <input
-              id="field-coreSkills"
-              type="text"
-              value={form.coreSkills}
-              placeholder="e.g. Java, Spring Boot, Microservices"
-              onChange={e => updateField('coreSkills', e.target.value)}
-            />
-          </div>
-        </Section>
+          </Section>
+        )}
 
         {/* ── Recommendations ── */}
         <Section id="recommendations" title="Recommendations" isOpen={isOpen} onToggle={toggleSection}>

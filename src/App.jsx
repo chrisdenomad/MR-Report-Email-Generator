@@ -32,6 +32,7 @@ export default function App() {
     overrideMethodologyLocation,
     resetMethodologyLocation,
     resetForm,
+    switchResearchType,
     templates,
     saveTemplate,
     deleteTemplate,
@@ -171,6 +172,7 @@ export default function App() {
           overrideMethodologyLocation={overrideMethodologyLocation}
           resetMethodologyLocation={resetMethodologyLocation}
           resetForm={resetForm}
+          switchResearchType={switchResearchType}
           templates={templates}
           saveTemplate={saveTemplate}
           deleteTemplate={deleteTemplate}

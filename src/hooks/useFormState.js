@@ -8,11 +8,23 @@ const MAX_TEMPLATES = 10
 // Fix #15: debounce delay for auto-save (ms)
 const SAVE_DEBOUNCE_MS = 300
 
-// ── Default columns ──────────────────────────────────────────────────────────
-const defaultColumns = [
+// ── Default columns — Market Capacity ────────────────────────────────────────
+export const defaultColumns = [
   { id: 'col1', label: 'Level / Category' },
   { id: 'col2', label: 'Candidates Found' },
   { id: 'col3', label: '%' },
+]
+
+// ── Default columns — Salary Benchmark ───────────────────────────────────────
+export const defaultSalaryColumns = [
+  { id: 'scol1', label: 'Location' },
+  { id: 'scol2', label: 'Role' },
+  { id: 'scol3', label: 'Seniority' },
+  { id: 'scol4', label: 'Min' },
+  { id: 'scol5', label: 'Max' },
+  { id: 'scol6', label: 'Basis' },
+  { id: 'scol7', label: 'Currency' },
+  { id: 'scol8', label: 'Data Resources' },
 ]
 
 function makeEmptyRow(id, columns) {
@@ -26,6 +38,12 @@ const defaultSummaryRows = [
   makeEmptyRow(3, defaultColumns),
 ]
 
+const defaultSalarySummaryRows = [
+  makeEmptyRow(1, defaultSalaryColumns),
+  makeEmptyRow(2, defaultSalaryColumns),
+  makeEmptyRow(3, defaultSalaryColumns),
+]
+
 // ── Default insights ─────────────────────────────────────────────────────────
 const defaultInsights = [
   { id: 1, text: '~XX% of profiles meet Senior+ criteria' },
@@ -35,13 +53,18 @@ const defaultInsights = [
   { id: 5, text: 'Architect-level profiles show higher competition and longer hiring cycles' },
 ]
 
+// ── Default opening lines per research type ───────────────────────────────────
+export const CAPACITY_OPENING_LINE = 'I would like to share with you the market capacity research for [Role] in [Location].'
+export const SALARY_OPENING_LINE = 'I would like to share with you the salary benchmark research for [Role] in [Location].'
+
 // ── Default form ─────────────────────────────────────────────────────────────
 const defaultForm = {
+  researchType: 'capacity',
   recipientName: '',
   role: '',
   location: '',
   // Content suggestion #1: editable opening line ([Role] and [Location] are interpolated at render time)
-  openingLine: 'I would like to share with you the market capacity research for [Role] in [Location].',
+  openingLine: CAPACITY_OPENING_LINE,
   interpretation: '',
   methodologyRole: '',
   methodologyRoleOverridden: false,
@@ -240,6 +263,33 @@ export function useFormState() {
     removeFromStorage(STORAGE_KEY)
   }
 
+  // ── Switch research type ──
+  // keepData: if true, preserve the existing table; if false, reset to the new type's defaults
+  function switchResearchType(newType, keepData) {
+    const isSalary = newType === 'salary'
+    const newOpeningLine = isSalary ? SALARY_OPENING_LINE : CAPACITY_OPENING_LINE
+    // Only auto-update the opening line if it still matches the current type's default
+    const currentDefault = form.researchType === 'salary' ? SALARY_OPENING_LINE : CAPACITY_OPENING_LINE
+    const shouldUpdateOpening = form.openingLine === currentDefault
+    setForm(prev => ({
+      ...prev,
+      researchType: newType,
+      ...(shouldUpdateOpening ? { openingLine: newOpeningLine } : {}),
+    }))
+    if (!keepData) {
+      const newCols = isSalary
+        ? defaultSalaryColumns.map(c => ({ ...c }))
+        : defaultColumns.map(c => ({ ...c }))
+      const newRows = isSalary
+        ? defaultSalarySummaryRows.map(r => ({ ...r, values: { ...r.values } }))
+        : defaultSummaryRows.map(r => ({ ...r, values: { ...r.values } }))
+      setColumns(newCols)
+      setSummaryRows(newRows)
+      setNextRowId(newRows.length + 1)
+      setNextColId(newCols.length + 1)
+    }
+  }
+
   // ── Bulk restore (used by template loader) ──
   function restoreState(saved) {
     setForm({ ...defaultForm, ...saved.form })
@@ -282,7 +332,8 @@ export function useFormState() {
   // ── Computed values ──
   // Content suggestion #7: include current month + year in subject line
   const monthYear = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })
-  const subject = `Market Capacity Report – ${form.role || '[Role]'} – ${form.location || '[Location]'} – ${monthYear}`
+  const reportLabel = form.researchType === 'salary' ? 'Salary Benchmark Report' : 'Market Capacity Report'
+  const subject = `${reportLabel} – ${form.role || '[Role]'} – ${form.location || '[Location]'} – ${monthYear}`
   const effectiveMethodologyRole = form.methodologyRoleOverridden ? form.methodologyRole : form.role
   const effectiveMethodologyLocation = form.methodologyLocationOverridden ? form.methodologyLocation : form.location
 
@@ -309,6 +360,7 @@ export function useFormState() {
     overrideMethodologyLocation,
     resetMethodologyLocation,
     resetForm,
+    switchResearchType,
     restoreState,
     templates,
     saveTemplate,

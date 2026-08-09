@@ -21,24 +21,174 @@
   --bg-hover: rgba(0,0,0,0.05);
 }
 
-/* Dark mode — applied when <html> has data-theme="dark" */
-[data-theme="dark"] {
-  --bg-primary: #1a1a1a;
-  --bg-secondary: #232323;
-  --bg-panel: #2a2a2a;
-  --bg-card: #313131;
-  --bg-input: #3a3a3a;
-  --border-color: #444444;
-  --border-focus: #46B28E;
-  --text-primary: #f0f0f0;
-  --text-secondary: #aaaaaa;
-  --text-label: #cccccc;
-  --text-heading: #46B28E;
-  --danger: #e05252;
-  --shadow: 0 4px 24px rgba(0,0,0,0.4);
-  --border: #444444;
-  --accent: #46B28E;
-  --bg-hover: rgba(255,255,255,0.07);
+
+/* ── Research Type Switcher ───────────────────────────────────────────────── */
+.research-type-switcher {
+  margin-bottom: 12px;
+}
+
+.research-type-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-secondary);
+}
+
+.btn-research-type {
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.btn-research-type:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.btn-research-type.active {
+  background: var(--epam-green);
+  color: #ffffff;
+}
+.btn-research-type.active:hover {
+  background: var(--epam-green-light);
+}
+
+/* ── Switch type inline confirm ──────────────────────────────────────────── */
+.switch-confirm {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.switch-confirm-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex: 1;
+  min-width: 160px;
+}
+
+.switch-confirm-actions {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.btn-switch-reset {
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(70, 178, 142, 0.1);
+  color: var(--epam-green);
+  border: 1px solid rgba(70, 178, 142, 0.35);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.btn-switch-reset:hover {
+  background: rgba(70, 178, 142, 0.2);
+  border-color: var(--epam-green);
+}
+
+.btn-switch-keep {
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.btn-switch-keep:hover {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+}
+
+.btn-switch-cancel {
+  padding: 2px 6px;
+  font-size: 13px;
+  line-height: 1;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+.btn-switch-cancel:hover {
+  color: var(--text-primary);
+}
+
+/* ── Select cell in salary table ─────────────────────────────────────────── */
+.cell-select-wrap {
+  width: 100%;
+}
+
+.cell-select {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  padding: 3px 4px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  appearance: auto;
+}
+.cell-select:focus {
+  border-color: var(--border-focus);
+}
+
+/* ── Custom text fallback for currency ───────────────────────────────────── */
+.cell-custom-wrap {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.cell-custom-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-input);
+  border: 1px solid var(--epam-green);
+  border-radius: 3px;
+  color: var(--text-primary);
+  font-size: 12px;
+  padding: 3px 4px;
+  outline: none;
+}
+
+.btn-custom-back {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 1px 3px;
+  transition: color 0.15s;
+  line-height: 1;
+}
+.btn-custom-back:hover {
+  color: var(--text-primary);
 }
 
 *, *::before, *::after {

@@ -6,6 +6,12 @@ export const IMPORTANT_REMARKS = [
   'Figures represent market estimates, not exact headcounts or hiring guarantees.',
 ]
 
+export const IMPORTANT_REMARKS_SALARY = [
+  'Salary data is sourced from publicly available market surveys and self-reported data (e.g. LinkedIn Salary, Glassdoor, and similar sources).',
+  'Figures represent market estimates and may vary by company size, industry, and location.',
+  'Data reflects market conditions at the time of research and may not capture recent compensation shifts.',
+]
+
 // ── Shared helper: filter rows that have at least one filled cell ─────────────
 export function getFilledRows(rows, columns) {
   return rows.filter(row => columns.some(col => row.values[col.id]?.trim()))
@@ -25,21 +31,21 @@ export function escapeHtml(str) {
  * generatePlainText — produces a plain-text version of the email
  */
 export function generatePlainText(form, columns, summaryRows, insights, subject, effectiveMethodologyRole, effectiveMethodologyLocation) {
+  const isSalary = form.researchType === 'salary'
   const role = form.role || '[Role]'
   const location = form.location || '[Location]'
   const recipientName = form.recipientName || ''
   const greeting = recipientName ? `Hi ${recipientName},` : 'Hi,'
 
-  // Content suggestion #1: use editable opening line, interpolate role/location
-  const openingLine = (form.openingLine || 'I would like to share with you the market capacity research for [Role] in [Location].')
+  const openingLine = (form.openingLine || (isSalary
+    ? 'I would like to share with you the salary benchmark research for [Role] in [Location].'
+    : 'I would like to share with you the market capacity research for [Role] in [Location].'))
     .replace('[Role]', role)
     .replace('[Location]', location)
 
-  // Build table header
+  // Build table
   const colLabels = columns.map(c => c.label || '—').join(' | ')
   const colSeparator = columns.map(() => '─────────────').join('─┼─')
-
-  // Build table rows
   const filledRows = getFilledRows(summaryRows, columns)
   const tableRows = filledRows.length > 0
     ? filledRows.map(row =>
@@ -47,34 +53,16 @@ export function generatePlainText(form, columns, summaryRows, insights, subject,
       ).join('\n')
     : '  (no data)'
 
-  // Key insights
-  const insightLines = insights
-    .filter(i => i.text.trim())
-    .map(i => `• ${i.text}`)
-    .join('\n')
+  const summaryHeading = isSalary ? 'SALARY BENCHMARK DATA' : 'RESEARCH SUMMARY'
+  const chartLabel = isSalary ? '[Salary range chart for visualization]' : '[Bar chart / Pie chart for visualization]'
+  const activeRemarks = isSalary ? IMPORTANT_REMARKS_SALARY : IMPORTANT_REMARKS
 
-  const lines = [
-    `Subject: ${subject}`,
-    '',
-    greeting,
-    '',
-    openingLine,
-    '',
-    '──────────────────────────────────────',
-    'RESEARCH SUMMARY',
-    '──────────────────────────────────────',
-    `  ${colLabels}`,
-    `  ${colSeparator}`,
-    tableRows,
-    '',
-    // Content suggestion #5: conditional chart placeholder
-    ...(form.includeChartPlaceholder !== false ? ['[Bar chart / Pie chart for visualization]', ''] : []),
-    form.interpretation || '[Add interpretation]',
+  const capacitySections = [
     '',
     '──────────────────────────────────────',
     'KEY INSIGHTS',
     '──────────────────────────────────────',
-    insightLines || '[Add key insights]',
+    insights.filter(i => i.text.trim()).map(i => `• ${i.text}`).join('\n') || '[Add key insights]',
     '',
     '──────────────────────────────────────',
     'SEARCH METHODOLOGY',
@@ -85,6 +73,25 @@ export function generatePlainText(form, columns, summaryRows, insights, subject,
     '• Excluded Company: EPAM',
     `• Total Years of Experience: ${form.totalYearsExperience || '[Add]'}`,
     `• Core Skills/Keyword: ${form.coreSkills || '[Add]'}`,
+  ]
+
+  const lines = [
+    `Subject: ${subject}`,
+    '',
+    greeting,
+    '',
+    openingLine,
+    '',
+    '──────────────────────────────────────',
+    summaryHeading,
+    '──────────────────────────────────────',
+    `  ${colLabels}`,
+    `  ${colSeparator}`,
+    tableRows,
+    '',
+    ...(form.includeChartPlaceholder !== false ? [chartLabel, ''] : []),
+    ...(!isSalary ? [form.interpretation || '[Add interpretation]', ''] : []),
+    ...(!isSalary ? capacitySections : []),
     '',
     '──────────────────────────────────────',
     'RECOMMENDATIONS',
@@ -94,8 +101,7 @@ export function generatePlainText(form, columns, summaryRows, insights, subject,
     '──────────────────────────────────────',
     'IMPORTANT REMARKS',
     '──────────────────────────────────────',
-    ...IMPORTANT_REMARKS.map(r => `• ${r}`),
-    // Closing line after Important Remarks
+    ...activeRemarks.map(r => `• ${r}`),
     ...(form.closingLine?.trim() ? ['', form.closingLine] : []),
   ]
 
@@ -167,13 +173,16 @@ ${innerDiv}
 // ── Private helper — builds the inner <div> shared by both generateHTML and generateHTMLFragment ──
 // Not exported. All HTML content and inline styles live here.
 function _buildInnerDiv(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation) {
+  const isSalary = form.researchType === 'salary'
   const role = form.role || '[Role]'
   const location = form.location || '[Location]'
   const recipientName = form.recipientName || ''
   const greeting = recipientName ? `Hi ${recipientName},` : 'Hi,'
 
   // Content suggestion #1: editable opening line with role/location interpolated
-  const openingLine = (form.openingLine || 'I would like to share with you the market capacity research for [Role] in [Location].')
+  const openingLine = (form.openingLine || (isSalary
+    ? 'I would like to share with you the salary benchmark research for [Role] in [Location].'
+    : 'I would like to share with you the market capacity research for [Role] in [Location].'))
     .replace('[Role]', role)
     .replace('[Location]', location)
 
@@ -363,14 +372,17 @@ function _buildInnerDiv(form, columns, summaryRows, insights, effectiveMethodolo
     ? `<p style="${pStyle}">${escapeHtml(form.closingLine)}</p>`
     : ''
 
-  const remarksHtml = IMPORTANT_REMARKS
+  const remarksHtml = (isSalary ? IMPORTANT_REMARKS_SALARY : IMPORTANT_REMARKS)
     .map(r => `<li style="${liStyle}">${escapeHtml(r)}</li>`)
     .join('')
 
   // Content suggestion #5: conditional chart placeholder
+  const chartLabel = isSalary ? 'Salary range chart for visualization' : 'Bar chart / Pie chart for visualization'
   const chartPlaceholderHtml = form.includeChartPlaceholder !== false
-    ? `\n<p style="${chartNoteStyle}">Bar chart / Pie chart for visualization</p>\n`
+    ? `\n<p style="${chartNoteStyle}">${chartLabel}</p>\n`
     : ''
+
+  const summaryHeading = isSalary ? 'Salary Benchmark Data' : 'Research Summary'
 
   return `<div style="${wrapperStyle}">
 
@@ -378,7 +390,7 @@ function _buildInnerDiv(form, columns, summaryRows, insights, effectiveMethodolo
 
 <p style="${pStyle}">${escapeHtml(openingLine)}</p>
 
-<p style="${sectionHeadingStyle}">Research Summary</p>
+<p style="${sectionHeadingStyle}">${summaryHeading}</p>
 <table style="${tableStyle}" cellpadding="0" cellspacing="0" border="0" width="100%">
   <thead>
     <tr>${theadHtml}</tr>
@@ -388,9 +400,9 @@ function _buildInnerDiv(form, columns, summaryRows, insights, effectiveMethodolo
   </tbody>
 </table>
 ${chartPlaceholderHtml}
-${interpretationHtml}
+${!isSalary ? interpretationHtml : ''}
 
-<p style="${sectionHeadingStyle}">Key Insights</p>
+${!isSalary ? `<p style="${sectionHeadingStyle}">Key Insights</p>
 <ul style="${ulStyle}">
   ${insightItemsHtml || `<li style="${liStyle};color:#aaaaaa;">[Add key insights]</li>`}
 </ul>
@@ -404,7 +416,7 @@ ${interpretationHtml}
   <li style="${liStyle}"><strong style="${strongStyle}">Total Years of Experience:</strong> ${escapeHtml(form.totalYearsExperience || '[Add]')}</li>
   <li style="${liStyle}"><strong style="${strongStyle}">Core Skills/Keyword:</strong> ${escapeHtml(form.coreSkills || '[Add]')}</li>
 </ul>
-
+` : ''}
 <p style="${sectionHeadingStyle}">Recommendations</p>
 <p style="${pStyle}">${recommendationsHtml}</p>
 
