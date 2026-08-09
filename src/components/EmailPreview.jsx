@@ -168,11 +168,13 @@ export default function EmailPreview({
             }
           </p>
 
-          {/* ── Capacity table (capacity + combined) ── */}
+          {/* ── Research Summary block ── */}
+
+          {/* Capacity table (capacity + combined) */}
           {!isSalary && (
             <>
               <p className="ep-section-heading">
-                {isCombined ? 'Research Summary' : 'Research Summary'}
+                {isCombined ? 'Market Capacity' : 'Research Summary'}
               </p>
               <div className="table-scroll-wrapper">
                 <table className="ep-table">
@@ -194,6 +196,34 @@ export default function EmailPreview({
               </div>
               {form.includeChartPlaceholder !== false && (
                 <span className="ep-chart-placeholder">Bar chart / Pie chart for visualization</span>
+              )}
+            </>
+          )}
+
+          {/* Salary table (salary + combined) — immediately after capacity in combined */}
+          {(isSalary || isCombined) && (
+            <>
+              <p className="ep-section-heading">Salary Benchmark Data</p>
+              <div className="table-scroll-wrapper">
+                <table className="ep-table">
+                  <thead>
+                    <tr>{(salaryColumns ?? []).map(col => <th key={col.id}>{col.label || '—'}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {filledSalaryRows.length > 0 ? (
+                      filledSalaryRows.map(row => (
+                        <tr key={row.id}>
+                          {(salaryColumns ?? []).map(col => <td key={col.id}>{row.values[col.id] || '—'}</td>)}
+                        </tr>
+                      ))
+                    ) : (
+                      <tr><td colSpan={(salaryColumns ?? []).length} className="ep-empty">No data entered yet</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {form.includeChartPlaceholder !== false && (
+                <span className="ep-chart-placeholder">Salary range chart for visualization</span>
               )}
             </>
           )}
@@ -229,34 +259,6 @@ export default function EmailPreview({
                 <li><strong>Total Years of Experience:</strong>{' '}{form.totalYearsExperience || <span className="ep-empty-inline">[Add]</span>}</li>
                 <li><strong>Core Skills/Keyword:</strong>{' '}{form.coreSkills || <span className="ep-empty-inline">[Add]</span>}</li>
               </ul>
-            </>
-          )}
-
-          {/* ── Salary table (salary + combined) ── */}
-          {(isSalary || isCombined) && (
-            <>
-              <p className="ep-section-heading">Salary Benchmark Data</p>
-              <div className="table-scroll-wrapper">
-                <table className="ep-table">
-                  <thead>
-                    <tr>{(salaryColumns ?? []).map(col => <th key={col.id}>{col.label || '—'}</th>)}</tr>
-                  </thead>
-                  <tbody>
-                    {filledSalaryRows.length > 0 ? (
-                      filledSalaryRows.map(row => (
-                        <tr key={row.id}>
-                          {(salaryColumns ?? []).map(col => <td key={col.id}>{row.values[col.id] || '—'}</td>)}
-                        </tr>
-                      ))
-                    ) : (
-                      <tr><td colSpan={(salaryColumns ?? []).length} className="ep-empty">No data entered yet</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              {form.includeChartPlaceholder !== false && (
-                <span className="ep-chart-placeholder">Salary range chart for visualization</span>
-              )}
             </>
           )}
 

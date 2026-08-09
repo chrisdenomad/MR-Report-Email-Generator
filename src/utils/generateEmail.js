@@ -95,24 +95,22 @@ export function generatePlainText(form, columns, summaryRows, insights, subject,
   ]
 
   if (isCombined) {
-    // Capacity table
     lines = lines.concat([
       '──────────────────────────────────────',
-      'RESEARCH SUMMARY',
+      'MARKET CAPACITY',
       '──────────────────────────────────────',
       ...buildTable(columns, summaryRows),
       '',
       ...(form.includeChartPlaceholder !== false ? ['[Bar chart / Pie chart for visualization]', ''] : []),
-      form.interpretation || '[Add interpretation]',
-      ...capacitySections,
       '',
-      // Salary table
       '──────────────────────────────────────',
       'SALARY BENCHMARK DATA',
       '──────────────────────────────────────',
       ...buildTable(salaryColumns ?? [], salaryRows ?? []),
       '',
       ...(form.includeChartPlaceholder !== false ? ['[Salary range chart for visualization]', ''] : []),
+      form.interpretation || '[Add interpretation]',
+      ...capacitySections,
     ])
   } else {
     const summaryHeading = isSalary ? 'SALARY BENCHMARK DATA' : 'RESEARCH SUMMARY'
@@ -431,14 +429,14 @@ function _buildInnerDiv(form, columns, summaryRows, insights, effectiveMethodolo
 
   if (isCombined) {
     bodyHtml = `
-<p style="${sectionHeadingStyle}">Research Summary</p>
+<p style="${sectionHeadingStyle}">Market Capacity</p>
 ${buildTableHtml(columns, summaryRows)}
 ${capacityChartHtml}
-${capacityOnlyHtml}
 
 <p style="${sectionHeadingStyle}">Salary Benchmark Data</p>
 ${buildTableHtml(salaryColumns ?? [], salaryRows ?? [])}
 ${salaryChartHtml}
+${capacityOnlyHtml}
 `
   } else if (isSalary) {
     bodyHtml = `
