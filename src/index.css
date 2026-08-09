@@ -42,14 +42,41 @@
   --bg-hover: rgba(255,255,255,0.06);
 }
 
-/* ── Sub-table label (combined mode) ─────────────────────────────────────── */
-.sub-table-label {
+/* ── Sub-section (nested collapsible inside a parent Section) ───────────── */
+.form-subsection {
+  margin-bottom: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.form-subsection-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 7px 12px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--bg-card);
+  border: none;
+  border-radius: 0;
+  text-align: left;
+  transition: background 0.15s;
+  gap: 8px;
+}
+
+.form-subsection-header:hover {
+  background: var(--bg-hover);
+}
+
+.form-subsection-title {
   font-size: 11px;
   font-weight: 700;
-  color: var(--epam-green);
+  color: var(--text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.8px;
-  margin: 10px 0 4px;
+  letter-spacing: 1px;
 }
 
 /* ── Research Type Switcher ───────────────────────────────────────────────── */

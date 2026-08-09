@@ -176,7 +176,7 @@ function ResearchTypeSwitcher({ current, onSwitch }) {
   )
 }
 
-const ALL_SECTIONS = ['header', 'summary', 'interpretation', 'insights', 'methodology', 'recommendations', 'closing']
+const ALL_SECTIONS = ['header', 'summary', 'sub-capacity', 'sub-salary', 'interpretation', 'insights', 'methodology', 'recommendations', 'closing']
 
 // Compute how many relevant sections have content — varies by research type
 function useProgress(form, summaryRows, columns, salaryRows, salaryColumns, insights) {
@@ -229,6 +229,32 @@ function Section({ id, title, children, isOpen, onToggle }) {
       </button>
       <div
         id={`section-body-${id}`}
+        className={`form-section-body${open ? ' open' : ''}`}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
+// ── Sub-section (nested collapsible inside a parent Section) ─────────────────
+function SubSection({ id, title, children, isOpen, onToggle }) {
+  const open = isOpen(id)
+  return (
+    <div className="form-subsection">
+      <button
+        type="button"
+        className="form-subsection-header"
+        onClick={() => onToggle(id)}
+        aria-expanded={open}
+        aria-controls={`subsection-body-${id}`}
+      >
+        <span className="form-subsection-title">{title}</span>
+        <span className="form-section-chevron" aria-hidden="true"
+          style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+      </button>
+      <div
+        id={`subsection-body-${id}`}
         className={`form-section-body${open ? ' open' : ''}`}
       >
         {children}
@@ -455,36 +481,63 @@ export default function InputForm({
             onSwitch={switchResearchType}
           />
 
-          {/* Capacity table — shown in capacity and combined modes */}
-          {(isCombined) && <p className="sub-table-label">Market Capacity</p>}
-          {(!isSalary) && (
-            <ResearchSummaryTable
-              columns={columns}
-              rows={summaryRows}
-              onUpdateCell={updateSummaryCell}
-              onAddRow={addSummaryRow}
-              onRemoveRow={removeSummaryRow}
-              onAddColumn={addColumn}
-              onRemoveColumn={removeColumn}
-              onUpdateColumnLabel={updateColumnLabel}
-              columnTypes={{}}
-            />
-          )}
-
-          {/* Salary table — shown in salary and combined modes */}
-          {isCombined && <p className="sub-table-label">Salary Benchmark</p>}
-          {(isSalary || isCombined) && (
-            <ResearchSummaryTable
-              columns={salaryColumns}
-              rows={salaryRows}
-              onUpdateCell={updateSalaryCell}
-              onAddRow={addSalaryRow}
-              onRemoveRow={removeSalaryRow}
-              onAddColumn={addSalaryColumn}
-              onRemoveColumn={removeSalaryColumn}
-              onUpdateColumnLabel={updateSalaryColumnLabel}
-              columnTypes={SALARY_COLUMN_TYPES}
-            />
+          {/* ── Combined: nested sub-sections ── */}
+          {isCombined ? (
+            <>
+              <SubSection id="sub-capacity" title="Market Capacity" isOpen={isOpen} onToggle={toggleSection}>
+                <ResearchSummaryTable
+                  columns={columns}
+                  rows={summaryRows}
+                  onUpdateCell={updateSummaryCell}
+                  onAddRow={addSummaryRow}
+                  onRemoveRow={removeSummaryRow}
+                  onAddColumn={addColumn}
+                  onRemoveColumn={removeColumn}
+                  onUpdateColumnLabel={updateColumnLabel}
+                  columnTypes={{}}
+                />
+              </SubSection>
+              <SubSection id="sub-salary" title="Salary Benchmark" isOpen={isOpen} onToggle={toggleSection}>
+                <ResearchSummaryTable
+                  columns={salaryColumns}
+                  rows={salaryRows}
+                  onUpdateCell={updateSalaryCell}
+                  onAddRow={addSalaryRow}
+                  onRemoveRow={removeSalaryRow}
+                  onAddColumn={addSalaryColumn}
+                  onRemoveColumn={removeSalaryColumn}
+                  onUpdateColumnLabel={updateSalaryColumnLabel}
+                  columnTypes={SALARY_COLUMN_TYPES}
+                />
+              </SubSection>
+            </>
+          ) : (
+            /* ── Single-type table ── */
+            isSalary ? (
+              <ResearchSummaryTable
+                columns={salaryColumns}
+                rows={salaryRows}
+                onUpdateCell={updateSalaryCell}
+                onAddRow={addSalaryRow}
+                onRemoveRow={removeSalaryRow}
+                onAddColumn={addSalaryColumn}
+                onRemoveColumn={removeSalaryColumn}
+                onUpdateColumnLabel={updateSalaryColumnLabel}
+                columnTypes={SALARY_COLUMN_TYPES}
+              />
+            ) : (
+              <ResearchSummaryTable
+                columns={columns}
+                rows={summaryRows}
+                onUpdateCell={updateSummaryCell}
+                onAddRow={addSummaryRow}
+                onRemoveRow={removeSummaryRow}
+                onAddColumn={addColumn}
+                onRemoveColumn={removeColumn}
+                onUpdateColumnLabel={updateColumnLabel}
+                columnTypes={{}}
+              />
+            )
           )}
 
           {/* Content suggestion #5: chart placeholder toggle */}
