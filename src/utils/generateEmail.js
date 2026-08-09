@@ -12,6 +12,12 @@ export const IMPORTANT_REMARKS_SALARY = [
   'Data reflects market conditions at the time of research and may not capture recent compensation shifts.',
 ]
 
+export const IMPORTANT_REMARKS_COMBINED = [
+  'Talent pool data is sourced from LinkedIn (publicly visible profiles); salary data is sourced from publicly available market surveys and self-reported data (e.g. LinkedIn Salary, Glassdoor).',
+  'All figures represent market estimates — not exact headcounts, hiring guarantees, or fixed compensation commitments.',
+  'Results may include profiles from restricted companies or regions (subject to EPAM hiring policies), and reflect market conditions at the time of research.',
+]
+
 // ── Shared helper: filter rows that have at least one filled cell ─────────────
 export function getFilledRows(rows, columns) {
   return rows.filter(row => columns.some(col => row.values[col.id]?.trim()))
@@ -81,7 +87,7 @@ export function generatePlainText(form, columns, summaryRows, insights, subject,
 
   // ── active remarks ──
   const activeRemarks = isCombined
-    ? [...IMPORTANT_REMARKS, ...IMPORTANT_REMARKS_SALARY]
+    ? IMPORTANT_REMARKS_COMBINED
     : isSalary ? IMPORTANT_REMARKS_SALARY : IMPORTANT_REMARKS
 
   // ── build line array ──
@@ -393,7 +399,7 @@ function _buildInnerDiv(form, columns, summaryRows, insights, effectiveMethodolo
 
   // ── Remarks ──
   const activeRemarks = isCombined
-    ? [...IMPORTANT_REMARKS, ...IMPORTANT_REMARKS_SALARY]
+    ? IMPORTANT_REMARKS_COMBINED
     : isSalary ? IMPORTANT_REMARKS_SALARY : IMPORTANT_REMARKS
   const remarksHtml = activeRemarks
     .map(r => `<li style="${liStyle}">${escapeHtml(r)}</li>`)

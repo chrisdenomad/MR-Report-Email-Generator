@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { generatePlainText, generateHTML, generateHTMLFragment, IMPORTANT_REMARKS, IMPORTANT_REMARKS_SALARY, getFilledRows } from '../utils/generateEmail'
+import { generatePlainText, generateHTML, generateHTMLFragment, IMPORTANT_REMARKS, IMPORTANT_REMARKS_SALARY, IMPORTANT_REMARKS_COMBINED, getFilledRows } from '../utils/generateEmail'
 
 // Fix #8: shared confirm message so both reset buttons stay in sync
 export const RESET_CONFIRM_MSG = 'Reset all form data? This cannot be undone.'
@@ -87,7 +87,7 @@ export default function EmailPreview({
   const empty = isFormEmpty(form, summaryRows, columns, salaryRows ?? [], salaryColumns ?? [], insights)
   const filledInsights = insights.filter(i => i.text.trim())
   const activeRemarks = isCombined
-    ? [...IMPORTANT_REMARKS, ...IMPORTANT_REMARKS_SALARY]
+    ? IMPORTANT_REMARKS_COMBINED
     : isSalary ? IMPORTANT_REMARKS_SALARY : IMPORTANT_REMARKS
   const chartLabel = isSalary ? 'Salary range chart for visualization' : 'Bar chart / Pie chart for visualization'
   const defaultOpeningLine = isCombined
