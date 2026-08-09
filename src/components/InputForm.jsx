@@ -36,7 +36,7 @@ const CLOSING_LINE_EXAMPLES = [
 ]
 
 // ── Salary column type definitions ────────────────────────────────────────────
-const SENIORITY_OPTIONS = ['A1','A2','A3','B1','B2','B3','C1','C2','C3','D1','D2','D3']
+const SENIORITY_OPTIONS = ['A1','A2','A3','A4','B1','B2','B3','B4','C1','C2','C3','C4']
 const BASIS_OPTIONS = ['Monthly', 'Yearly']
 const CURRENCY_OPTIONS = ['USD','VND','PLN','HKD','AUD','JPY','MYR','SGD','CNY']
 
