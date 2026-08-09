@@ -138,16 +138,8 @@ export default function EmailPreview({
         </div>
       </div>
 
-      {/* B4: Empty state */}
-      {empty ? (
-        <div className="preview-empty-state">
-          <div className="preview-empty-arrow">←</div>
-          <div className="empty-icon">✉</div>
-          <h3>Your email preview will appear here</h3>
-          <p>Fill in the form on the left to generate your market capacity report email.</p>
-        </div>
-      ) : (
-        <div className="preview-panel-body">
+      {/* Email preview — always shown */}
+      <div className="preview-panel-body">
           {/* Email client header — From / To / Subject */}
           <div className="email-client-header">
             <div className="email-client-row">
@@ -282,7 +274,6 @@ export default function EmailPreview({
 
           </div>
         </div>
-      )}
     </div>
   )
 }
