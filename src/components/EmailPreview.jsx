@@ -132,7 +132,6 @@ export default function EmailPreview({
   const activeRemarks = isCombined
     ? IMPORTANT_REMARKS_COMBINED
     : isSalary ? IMPORTANT_REMARKS_SALARY : IMPORTANT_REMARKS
-  const chartLabel = isSalary ? 'Salary range chart for visualization' : 'Bar chart / Pie chart for visualization'
   const defaultOpeningLine = isCombined
     ? 'I would like to share with you the market capacity and salary benchmark research for [Role] in [Location].'
     : isSalary
