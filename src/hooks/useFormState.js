@@ -2,8 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 
 const STORAGE_KEY = 'mr_report_form_state'
 const TEMPLATES_KEY = 'mr_report_templates'
-const API_KEY_STORAGE = 'mr_report_api_key'
-const API_KEY_NOTE_STORAGE = 'mr_report_api_key_note'
 const SPLIT_PCT_STORAGE = 'mr_report_split_pct'
 const MAX_TEMPLATES = 10
 
@@ -205,13 +203,6 @@ export function useFormState() {
     )
   }
 
-  // Fix #4: atomic replacement of all insights at once (used by AI insights handler)
-  function replaceInsights(newInsights) {
-    const maxId = newInsights.reduce((max, i) => Math.max(max, i.id), 0)
-    setInsights(newInsights)
-    setNextInsightId(maxId + 1)
-  }
-
   // ── Methodology overrides ──
   function overrideMethodologyRole(value) {
     setForm(prev => ({
@@ -238,7 +229,6 @@ export function useFormState() {
   }
 
   // ── Reset ──
-  // Note: only clears form state — templates and API key are preserved intentionally
   function resetForm() {
     setForm({ ...defaultForm })
     setColumns(defaultColumns.map(c => ({ ...c })))
@@ -263,35 +253,6 @@ export function useFormState() {
 
   // ── Templates ──
   const [templates, setTemplates] = useState(() => readFromStorage(TEMPLATES_KEY, []))
-
-  // ── API Key (persisted separately, never in form snapshots) ──
-  const [apiKey, setApiKeyState] = useState(() => {
-    try { return localStorage.getItem(API_KEY_STORAGE) || '' } catch { return '' }
-  })
-
-  function saveApiKey(key) {
-    const trimmed = key.trim()
-    setApiKeyState(trimmed)
-    if (trimmed) {
-      writeToStorage(API_KEY_STORAGE, trimmed)
-    } else {
-      removeFromStorage(API_KEY_STORAGE)
-    }
-  }
-
-  // ── API Key Note ──
-  const [apiKeyNote, setApiKeyNoteState] = useState(() => {
-    try { return localStorage.getItem(API_KEY_NOTE_STORAGE) || '' } catch { return '' }
-  })
-
-  function saveApiKeyNote(text) {
-    setApiKeyNoteState(text)
-    if (text.trim()) {
-      writeToStorage(API_KEY_NOTE_STORAGE, text)
-    } else {
-      removeFromStorage(API_KEY_NOTE_STORAGE)
-    }
-  }
 
   function saveTemplate(name) {
     if (!name.trim()) return
@@ -343,7 +304,6 @@ export function useFormState() {
     addInsight,
     removeInsight,
     updateInsight,
-    replaceInsights,
     overrideMethodologyRole,
     resetMethodologyRole,
     overrideMethodologyLocation,
@@ -354,10 +314,6 @@ export function useFormState() {
     saveTemplate,
     deleteTemplate,
     loadTemplate,
-    apiKey,
-    saveApiKey,
-    apiKeyNote,
-    saveApiKeyNote,
   }
 }
 

@@ -103,6 +103,22 @@ export function generatePlainText(form, columns, summaryRows, insights, subject,
 }
 
 /**
+ * generateHTMLFragment — produces the inner body content only (no <html>/<head>/<body> wrappers).
+ *
+ * Use this for clipboard "paste as formatting" into Outlook.
+ * Outlook's paste handler expects an HTML fragment, not a full document.
+ * Wrapping in <!--StartFragment--> / <!--EndFragment--> satisfies the CF_HTML
+ * clipboard spec so Outlook knows exactly where the pasteable content begins/ends.
+ *
+ * The root <div> carries explicit mso-* properties so Outlook does not override
+ * the font, size, or line-height after pasting.
+ */
+export function generateHTMLFragment(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation) {
+  const _innerDiv = _buildInnerDiv(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation)
+  return `<!--StartFragment-->${_innerDiv}<!--EndFragment-->`
+}
+
+/**
  * generateHTML — produces a fully Outlook-compatible HTML email.
  *
  * Rules followed for Outlook compatibility:
@@ -115,17 +131,8 @@ export function generatePlainText(form, columns, summaryRows, insights, subject,
  *  - mso-line-height-rule for Outlook line-height consistency
  */
 export function generateHTML(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation) {
-  const role = form.role || '[Role]'
-  const location = form.location || '[Location]'
-  const recipientName = form.recipientName || ''
-  const greeting = recipientName ? `Hi ${recipientName},` : 'Hi,'
+  const innerDiv = _buildInnerDiv(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation)
 
-  // Content suggestion #1: editable opening line with role/location interpolated
-  const openingLine = (form.openingLine || 'I would like to share with you the market capacity research for [Role] in [Location].')
-    .replace('[Role]', role)
-    .replace('[Location]', location)
-
-  // ── Inline style constants (Outlook-safe, no shorthand) ──
   const bodyStyle = [
     'font-family: Arial, Helvetica, sans-serif',
     'font-size: 14px',
@@ -137,10 +144,53 @@ export function generateHTML(form, columns, summaryRows, insights, effectiveMeth
     'background-color: #ffffff',
   ].join(';')
 
+  return `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!--[if gte mso 9]>
+<xml>
+  <o:OfficeDocumentSettings>
+    <o:AllowPNG/>
+    <o:PixelsPerInch>96</o:PixelsPerInch>
+  </o:OfficeDocumentSettings>
+</xml>
+<![endif]-->
+</head>
+<body style="${bodyStyle}">
+${innerDiv}
+</body>
+</html>`
+}
+
+// ── Private helper — builds the inner <div> shared by both generateHTML and generateHTMLFragment ──
+// Not exported. All HTML content and inline styles live here.
+function _buildInnerDiv(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation) {
+  const role = form.role || '[Role]'
+  const location = form.location || '[Location]'
+  const recipientName = form.recipientName || ''
+  const greeting = recipientName ? `Hi ${recipientName},` : 'Hi,'
+
+  // Content suggestion #1: editable opening line with role/location interpolated
+  const openingLine = (form.openingLine || 'I would like to share with you the market capacity research for [Role] in [Location].')
+    .replace('[Role]', role)
+    .replace('[Location]', location)
+
+  // ── Inline style constants (Outlook-safe, no shorthand) ──
+  // The wrapperStyle carries explicit mso-* properties so Outlook does not
+  // override font, size, or line-height when the fragment is pasted.
   const wrapperStyle = [
     'max-width: 750px',
     'margin-left: auto',
     'margin-right: auto',
+    'font-family: Arial, Helvetica, sans-serif',
+    'font-size: 14px',
+    'color: #1a1a1a',
+    'line-height: 1.6',
+    'mso-line-height-rule: exactly',
+    'mso-margin-top-alt: 0',
+    'mso-margin-bottom-alt: 0',
   ].join(';')
 
   const pStyle = [
@@ -151,6 +201,8 @@ export function generateHTML(form, columns, summaryRows, insights, effectiveMeth
     'mso-line-height-rule: exactly',
     'margin-top: 0',
     'margin-bottom: 14px',
+    'mso-margin-top-alt: 0',
+    'mso-margin-bottom-alt: 14px',
   ].join(';')
 
   const sectionHeadingStyle = [
@@ -164,7 +216,10 @@ export function generateHTML(form, columns, summaryRows, insights, effectiveMeth
     'margin-bottom: 8px',
     'margin-left: 0',
     'margin-right: 0',
+    'mso-margin-top-alt: 20px',
+    'mso-margin-bottom-alt: 8px',
     'padding-top: 8px',
+    'padding-bottom: 4px',
     'border-top-width: 1px',
     'border-top-style: solid',
     'border-top-color: #e0e0e0',
@@ -178,6 +233,8 @@ export function generateHTML(form, columns, summaryRows, insights, effectiveMeth
     'margin-bottom: 10px',
     'margin-left: 0',
     'margin-right: 0',
+    'mso-margin-top-alt: 4px',
+    'mso-margin-bottom-alt: 10px',
     'padding-left: 20px',
   ].join(';')
 
@@ -189,6 +246,8 @@ export function generateHTML(form, columns, summaryRows, insights, effectiveMeth
     'mso-line-height-rule: exactly',
     'margin-top: 3px',
     'margin-bottom: 3px',
+    'mso-margin-top-alt: 3px',
+    'mso-margin-bottom-alt: 3px',
   ].join(';')
 
   const thStyle = [
@@ -244,6 +303,8 @@ export function generateHTML(form, columns, summaryRows, insights, effectiveMeth
     'border-spacing: 0',
     'font-size: 12px',
     'margin-bottom: 10px',
+    'mso-table-lspace: 0pt',
+    'mso-table-rspace: 0pt',
   ].join(';')
 
   const chartNoteStyle = [
@@ -256,6 +317,8 @@ export function generateHTML(form, columns, summaryRows, insights, effectiveMeth
     'margin-bottom: 10px',
     'margin-left: 0',
     'margin-right: 0',
+    'mso-margin-top-alt: 8px',
+    'mso-margin-bottom-alt: 10px',
   ].join(';')
 
   const strongStyle = [
@@ -309,22 +372,7 @@ export function generateHTML(form, columns, summaryRows, insights, effectiveMeth
     ? `\n<p style="${chartNoteStyle}">Bar chart / Pie chart for visualization</p>\n`
     : ''
 
-  return `<!DOCTYPE html>
-<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!--[if gte mso 9]>
-<xml>
-  <o:OfficeDocumentSettings>
-    <o:AllowPNG/>
-    <o:PixelsPerInch>96</o:PixelsPerInch>
-  </o:OfficeDocumentSettings>
-</xml>
-<![endif]-->
-</head>
-<body style="${bodyStyle}">
-<div style="${wrapperStyle}">
+  return `<div style="${wrapperStyle}">
 
 <p style="${pStyle}">${greeting}</p>
 
@@ -366,8 +414,7 @@ ${interpretationHtml}
 </ul>
 
 ${closingLineHtml}
+<p style="${pStyle}">&#8203;</p>
 
-</div>
-</body>
-</html>`
+</div>`
 }

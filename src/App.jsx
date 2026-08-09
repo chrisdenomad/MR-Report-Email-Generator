@@ -27,7 +27,6 @@ export default function App() {
     addInsight,
     removeInsight,
     updateInsight,
-    replaceInsights,
     overrideMethodologyRole,
     resetMethodologyRole,
     overrideMethodologyLocation,
@@ -37,10 +36,6 @@ export default function App() {
     saveTemplate,
     deleteTemplate,
     loadTemplate,
-    apiKey,
-    saveApiKey,
-    apiKeyNote,
-    saveApiKeyNote,
   } = useFormState()
 
   // ── Theme toggle (light default) ──
@@ -171,7 +166,6 @@ export default function App() {
           addInsight={addInsight}
           removeInsight={removeInsight}
           updateInsight={updateInsight}
-          replaceInsights={replaceInsights}
           overrideMethodologyRole={overrideMethodologyRole}
           resetMethodologyRole={resetMethodologyRole}
           overrideMethodologyLocation={overrideMethodologyLocation}
@@ -181,10 +175,6 @@ export default function App() {
           saveTemplate={saveTemplate}
           deleteTemplate={deleteTemplate}
           loadTemplate={loadTemplate}
-          apiKey={apiKey}
-          saveApiKey={saveApiKey}
-          apiKeyNote={apiKeyNote}
-          saveApiKeyNote={saveApiKeyNote}
         />
 
         {/* Drag handle */}

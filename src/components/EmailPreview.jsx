@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { generatePlainText, generateHTML, IMPORTANT_REMARKS, getFilledRows } from '../utils/generateEmail'
+import { generatePlainText, generateHTML, generateHTMLFragment, IMPORTANT_REMARKS, getFilledRows } from '../utils/generateEmail'
 
 // Fix #8: shared confirm message so both reset buttons stay in sync
 export const RESET_CONFIRM_MSG = 'Reset all form data? This cannot be undone.'
@@ -55,17 +55,21 @@ export default function EmailPreview({
 
   // Fix #2 & #3: .catch() added; Firefox fallback via execCommand when ClipboardItem unavailable
   function copyHTML() {
-    const html = generateHTML(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation)
-
     // Modern path: ClipboardItem (Chrome, Edge, Safari)
+    // Use the HTML fragment (no <html>/<head>/<body> wrappers) so Outlook's
+    // "Paste Special → Keep Source Formatting" receives a clean body fragment
+    // with CF_HTML StartFragment/EndFragment markers instead of a full document.
+    // This preserves font, size, table borders, and paragraph spacing after paste.
     if (typeof ClipboardItem !== 'undefined') {
-      const blob = new Blob([html], { type: 'text/html' })
+      const fragment = generateHTMLFragment(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation)
+      const blob = new Blob([fragment], { type: 'text/html' })
       const item = new ClipboardItem({ 'text/html': blob })
       navigator.clipboard.write([item])
         .then(() => showToast('Copied as rich HTML!'))
         .catch(() => showToast('Copy failed — please copy manually.'))
     } else {
-      // Firefox fallback: copy as plain text with a note
+      // Firefox fallback: copy full HTML source as plain text (rich copy not supported)
+      const html = generateHTML(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation)
       navigator.clipboard.writeText(html)
         .then(() => showToast('Copied as HTML source (rich copy not supported in this browser).'))
         .catch(() => showToast('Copy failed — please copy manually.'))
