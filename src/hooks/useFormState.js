@@ -334,7 +334,19 @@ export function useFormState() {
 
   // ── Reset ──
   function resetForm() {
-    setForm({ ...defaultForm })
+    // Preserve the current research type and its matching opening line;
+    // everything else returns to defaults.
+    const currentType = form.researchType ?? 'capacity'
+    const DEFAULT_OPENING = {
+      capacity: CAPACITY_OPENING_LINE,
+      salary: SALARY_OPENING_LINE,
+      combined: COMBINED_OPENING_LINE,
+    }
+    setForm({
+      ...defaultForm,
+      researchType: currentType,
+      openingLine: DEFAULT_OPENING[currentType] ?? CAPACITY_OPENING_LINE,
+    })
     setColumns(defaultColumns.map(c => ({ ...c })))
     setSummaryRows(defaultSummaryRows.map(r => ({ ...r, values: { ...r.values } })))
     setNextRowId(defaultSummaryRows.length + 1)

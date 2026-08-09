@@ -923,6 +923,17 @@ body {
 
 .btn-copy-html:hover { background: var(--epam-green-light); }
 
+.btn-download-html {
+  background: transparent;
+  color: var(--epam-green);
+  border: 1px solid var(--epam-green);
+}
+
+.btn-download-html:hover {
+  background: var(--epam-green);
+  color: #fff;
+}
+
 /* Fix #A1: Reset button as proper CSS class */
 .btn-reset {
   background: transparent;

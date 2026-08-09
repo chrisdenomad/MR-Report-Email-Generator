@@ -157,7 +157,7 @@ function ResearchTypeSwitcher({ current, onSwitch }) {
       {pendingType && (
         <div className="switch-confirm">
           <span className="switch-confirm-text">
-            Switching to <strong>{pendingType === 'salary' ? 'Salary Benchmark' : pendingType === 'combined' ? 'Combined' : 'Market Capacity'}</strong>. What about the table?
+            Switching to <strong>{pendingType === 'salary' ? 'Salary Benchmark' : pendingType === 'combined' ? 'Combined' : 'Market Capacity'}</strong>. What about the {pendingType === 'combined' || current === 'combined' ? 'tables' : 'table'}?
           </span>
           <div className="switch-confirm-actions">
             <button type="button" className="btn-switch-reset" onClick={handleReset}>
@@ -196,7 +196,7 @@ function useProgress(form, summaryRows, columns, salaryRows, salaryColumns, insi
       : isSalary
         ? [
             !!(form.role || form.location || form.recipientName),
-            summaryRows.some(row => columns.some(col => row.values[col.id]?.trim())),
+            salaryRows.some(row => salaryColumns.some(col => row.values[col.id]?.trim())),
             !!form.recommendations.trim(),
           ]
         : [

@@ -61,6 +61,20 @@ export default function EmailPreview({
       .catch(() => showToast('Copy failed — please copy manually.'))
   }
 
+  function downloadHTML() {
+    const html = generateHTML(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation, salaryColumns, salaryRows)
+    const blob = new Blob([html], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    const role = form.role ? form.role.replace(/[^a-z0-9]/gi, '_') : 'report'
+    const location = form.location ? form.location.replace(/[^a-z0-9]/gi, '_') : ''
+    a.href = url
+    a.download = `MR_Report${role ? `_${role}` : ''}${location ? `_${location}` : ''}.html`
+    a.click()
+    URL.revokeObjectURL(url)
+    showToast('Downloaded as .html file!')
+  }
+
   function copyHTML() {
     if (typeof ClipboardItem !== 'undefined') {
       const fragment = generateHTMLFragment(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation, salaryColumns, salaryRows)
@@ -132,6 +146,14 @@ export default function EmailPreview({
               <polyline points="8 6 2 12 8 18"></polyline>
             </svg>
             Copy Rich HTML
+          </button>
+          <button className="btn-copy btn-download-html" onClick={downloadHTML} disabled={empty}>
+            <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Download .html
           </button>
         </div>
       </div>
