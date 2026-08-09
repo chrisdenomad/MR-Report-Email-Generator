@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { generatePlainText, generateHTML, generateHTMLFragment, IMPORTANT_REMARKS, getFilledRows } from '../utils/generateEmail'
+import { generatePlainText, generateHTML, generateHTMLFragment, IMPORTANT_REMARKS, IMPORTANT_REMARKS_SALARY, getFilledRows } from '../utils/generateEmail'
 
 // Fix #8: shared confirm message so both reset buttons stay in sync
 export const RESET_CONFIRM_MSG = 'Reset all form data? This cannot be undone.'
@@ -8,10 +8,13 @@ export const RESET_CONFIRM_MSG = 'Reset all form data? This cannot be undone.'
 function isFormEmpty(form, summaryRows, columns, insights) {
   const noHeader = !form.role && !form.location && !form.recipientName
   const noSummary = getFilledRows(summaryRows, columns).length === 0
+  const noRecommendations = !form.recommendations?.trim()
+  if (form.researchType === 'salary') {
+    return noHeader && noSummary && noRecommendations
+  }
   const noInterpretation = !form.interpretation?.trim()
   const noInsights = !insights.some(i => i.text.trim())
   const noMethodology = !form.totalYearsExperience && !form.coreSkills
-  const noRecommendations = !form.recommendations?.trim()
   return noHeader && noSummary && noInterpretation && noInsights && noMethodology && noRecommendations
 }
 
@@ -79,11 +82,18 @@ export default function EmailPreview({
   const role = form.role || '[Role]'
   const location = form.location || '[Location]'
   const recipientName = form.recipientName || ''
+  const isSalary = form.researchType === 'salary'
   // Fix #6: use shared getFilledRows instead of inline filter
   const filledRows = getFilledRows(summaryRows, columns)
   const empty = isFormEmpty(form, summaryRows, columns, insights)
   // Fix #preview insights double-filter: compute once
   const filledInsights = insights.filter(i => i.text.trim())
+  const activeRemarks = isSalary ? IMPORTANT_REMARKS_SALARY : IMPORTANT_REMARKS
+  const summaryHeading = isSalary ? 'Salary Benchmark Data' : 'Research Summary'
+  const chartLabel = isSalary ? 'Salary range chart for visualization' : 'Bar chart / Pie chart for visualization'
+  const defaultOpeningLine = isSalary
+    ? 'I would like to share with you the salary benchmark research for [Role] in [Location].'
+    : 'I would like to share with you the market capacity research for [Role] in [Location].'
 
   return (
     // Fix #31: owns its own .preview-panel wrapper
@@ -165,14 +175,14 @@ export default function EmailPreview({
             </p>
             {/* Content suggestion #1: render interpolated opening line */}
             <p className="ep-intro">
-              {(form.openingLine || 'I would like to share with you the market capacity research for [Role] in [Location].')
+              {(form.openingLine || defaultOpeningLine)
                 .replace('[Role]', role)
                 .replace('[Location]', location)
               }
             </p>
 
-            {/* Research Summary */}
-            <p className="ep-section-heading">Research Summary</p>
+            {/* Research Summary / Salary Benchmark Data */}
+            <p className="ep-section-heading">{summaryHeading}</p>
             <div className="table-scroll-wrapper">
               <table className="ep-table">
                 <thead>
@@ -204,43 +214,50 @@ export default function EmailPreview({
 
             {/* Chart placeholder — content suggestion #5: conditional */}
             {form.includeChartPlaceholder !== false && (
-              <span className="ep-chart-placeholder">Bar chart / Pie chart for visualization</span>
+              <span className="ep-chart-placeholder">{chartLabel}</span>
             )}
 
-            {/* Interpretation — content only, no label */}
-            {form.interpretation && (
+            {/* Interpretation — capacity only */}
+            {!isSalary && form.interpretation && (
               <p className="ep-interpretation">{form.interpretation}</p>
             )}
 
-            {/* Key Insights */}
-            <p className="ep-section-heading">Key Insights</p>
-            {/* Fix #preview: use pre-computed filledInsights */}
-            {filledInsights.length > 0 ? (
-              <ul className="ep-bullet-list">
-                {filledInsights.map(item => (
-                  <li key={item.id}>{item.text}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="ep-empty">[Add key insights]</p>
+            {/* Key Insights — capacity only */}
+            {!isSalary && (
+              <>
+                <p className="ep-section-heading">Key Insights</p>
+                {filledInsights.length > 0 ? (
+                  <ul className="ep-bullet-list">
+                    {filledInsights.map(item => (
+                      <li key={item.id}>{item.text}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="ep-empty">[Add key insights]</p>
+                )}
+              </>
             )}
 
-            {/* Search Methodology */}
-            <p className="ep-section-heading">Search Methodology</p>
-            <ul className="ep-bullet-list">
-              <li><strong>Role:</strong> {effectiveMethodologyRole || <span className="ep-empty-inline">[Add role]</span>}</li>
-              <li><strong>Search Platform:</strong> LinkedIn (visible profiles only)</li>
-              <li><strong>Location:</strong> {effectiveMethodologyLocation || <span className="ep-empty-inline">[Add location]</span>}</li>
-              <li><strong>Excluded Company:</strong> EPAM</li>
-              <li>
-                <strong>Total Years of Experience:</strong>{' '}
-                {form.totalYearsExperience || <span className="ep-empty-inline">[Add]</span>}
-              </li>
-              <li>
-                <strong>Core Skills/Keyword:</strong>{' '}
-                {form.coreSkills || <span className="ep-empty-inline">[Add]</span>}
-              </li>
-            </ul>
+            {/* Search Methodology — capacity only */}
+            {!isSalary && (
+              <>
+                <p className="ep-section-heading">Search Methodology</p>
+                <ul className="ep-bullet-list">
+                  <li><strong>Role:</strong> {effectiveMethodologyRole || <span className="ep-empty-inline">[Add role]</span>}</li>
+                  <li><strong>Search Platform:</strong> LinkedIn (visible profiles only)</li>
+                  <li><strong>Location:</strong> {effectiveMethodologyLocation || <span className="ep-empty-inline">[Add location]</span>}</li>
+                  <li><strong>Excluded Company:</strong> EPAM</li>
+                  <li>
+                    <strong>Total Years of Experience:</strong>{' '}
+                    {form.totalYearsExperience || <span className="ep-empty-inline">[Add]</span>}
+                  </li>
+                  <li>
+                    <strong>Core Skills/Keyword:</strong>{' '}
+                    {form.coreSkills || <span className="ep-empty-inline">[Add]</span>}
+                  </li>
+                </ul>
+              </>
+            )}
 
             {/* Recommendations */}
             <p className="ep-section-heading">Recommendations</p>
@@ -253,7 +270,7 @@ export default function EmailPreview({
             {/* Important Remarks */}
             <p className="ep-section-heading">Important Remarks</p>
             <ul className="ep-bullet-list">
-              {IMPORTANT_REMARKS.map((remark, i) => (
+              {activeRemarks.map((remark, i) => (
                 <li key={i}>{remark}</li>
               ))}
             </ul>
