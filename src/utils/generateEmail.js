@@ -30,32 +30,36 @@ export function escapeHtml(str) {
 /**
  * generatePlainText — produces a plain-text version of the email
  */
-export function generatePlainText(form, columns, summaryRows, insights, subject, effectiveMethodologyRole, effectiveMethodologyLocation) {
+export function generatePlainText(form, columns, summaryRows, insights, subject, effectiveMethodologyRole, effectiveMethodologyLocation, salaryColumns, salaryRows) {
   const isSalary = form.researchType === 'salary'
+  const isCombined = form.researchType === 'combined'
   const role = form.role || '[Role]'
   const location = form.location || '[Location]'
   const recipientName = form.recipientName || ''
   const greeting = recipientName ? `Hi ${recipientName},` : 'Hi,'
 
-  const openingLine = (form.openingLine || (isSalary
-    ? 'I would like to share with you the salary benchmark research for [Role] in [Location].'
-    : 'I would like to share with you the market capacity research for [Role] in [Location].'))
+  const defaultOpeningLine = isCombined
+    ? 'I would like to share with you the market capacity and salary benchmark research for [Role] in [Location].'
+    : isSalary
+      ? 'I would like to share with you the salary benchmark research for [Role] in [Location].'
+      : 'I would like to share with you the market capacity research for [Role] in [Location].'
+
+  const openingLine = (form.openingLine || defaultOpeningLine)
     .replace('[Role]', role)
     .replace('[Location]', location)
 
-  // Build table
-  const colLabels = columns.map(c => c.label || '—').join(' | ')
-  const colSeparator = columns.map(() => '─────────────').join('─┼─')
-  const filledRows = getFilledRows(summaryRows, columns)
-  const tableRows = filledRows.length > 0
-    ? filledRows.map(row =>
-        '  ' + columns.map(col => row.values[col.id] || '—').join(' | ')
-      ).join('\n')
-    : '  (no data)'
+  // ── helpers ──
+  function buildTable(cols, rows) {
+    const colLabels = cols.map(c => c.label || '—').join(' | ')
+    const colSeparator = cols.map(() => '─────────────').join('─┼─')
+    const filled = getFilledRows(rows, cols)
+    const tableRows = filled.length > 0
+      ? filled.map(row => '  ' + cols.map(col => row.values[col.id] || '—').join(' | ')).join('\n')
+      : '  (no data)'
+    return [`  ${colLabels}`, `  ${colSeparator}`, tableRows]
+  }
 
-  const summaryHeading = isSalary ? 'SALARY BENCHMARK DATA' : 'RESEARCH SUMMARY'
   const chartLabel = isSalary ? '[Salary range chart for visualization]' : '[Bar chart / Pie chart for visualization]'
-  const activeRemarks = isSalary ? IMPORTANT_REMARKS_SALARY : IMPORTANT_REMARKS
 
   const capacitySections = [
     '',
@@ -75,23 +79,56 @@ export function generatePlainText(form, columns, summaryRows, insights, subject,
     `• Core Skills/Keyword: ${form.coreSkills || '[Add]'}`,
   ]
 
-  const lines = [
+  // ── active remarks ──
+  const activeRemarks = isCombined
+    ? [...IMPORTANT_REMARKS, ...IMPORTANT_REMARKS_SALARY]
+    : isSalary ? IMPORTANT_REMARKS_SALARY : IMPORTANT_REMARKS
+
+  // ── build line array ──
+  let lines = [
     `Subject: ${subject}`,
     '',
     greeting,
     '',
     openingLine,
     '',
-    '──────────────────────────────────────',
-    summaryHeading,
-    '──────────────────────────────────────',
-    `  ${colLabels}`,
-    `  ${colSeparator}`,
-    tableRows,
-    '',
-    ...(form.includeChartPlaceholder !== false ? [chartLabel, ''] : []),
-    ...(!isSalary ? [form.interpretation || '[Add interpretation]', ''] : []),
-    ...(!isSalary ? capacitySections : []),
+  ]
+
+  if (isCombined) {
+    // Capacity table
+    lines = lines.concat([
+      '──────────────────────────────────────',
+      'RESEARCH SUMMARY',
+      '──────────────────────────────────────',
+      ...buildTable(columns, summaryRows),
+      '',
+      ...(form.includeChartPlaceholder !== false ? ['[Bar chart / Pie chart for visualization]', ''] : []),
+      form.interpretation || '[Add interpretation]',
+      ...capacitySections,
+      '',
+      // Salary table
+      '──────────────────────────────────────',
+      'SALARY BENCHMARK DATA',
+      '──────────────────────────────────────',
+      ...buildTable(salaryColumns ?? [], salaryRows ?? []),
+      '',
+      ...(form.includeChartPlaceholder !== false ? ['[Salary range chart for visualization]', ''] : []),
+    ])
+  } else {
+    const summaryHeading = isSalary ? 'SALARY BENCHMARK DATA' : 'RESEARCH SUMMARY'
+    lines = lines.concat([
+      '──────────────────────────────────────',
+      summaryHeading,
+      '──────────────────────────────────────',
+      ...buildTable(columns, summaryRows),
+      '',
+      ...(form.includeChartPlaceholder !== false ? [chartLabel, ''] : []),
+      ...(!isSalary ? [form.interpretation || '[Add interpretation]', ''] : []),
+      ...(!isSalary ? capacitySections : []),
+    ])
+  }
+
+  lines = lines.concat([
     '',
     '──────────────────────────────────────',
     'RECOMMENDATIONS',
@@ -103,41 +140,24 @@ export function generatePlainText(form, columns, summaryRows, insights, subject,
     '──────────────────────────────────────',
     ...activeRemarks.map(r => `• ${r}`),
     ...(form.closingLine?.trim() ? ['', form.closingLine] : []),
-  ]
+  ])
 
   return lines.join('\n')
 }
 
 /**
  * generateHTMLFragment — produces the inner body content only (no <html>/<head>/<body> wrappers).
- *
- * Use this for clipboard "paste as formatting" into Outlook.
- * Outlook's paste handler expects an HTML fragment, not a full document.
- * Wrapping in <!--StartFragment--> / <!--EndFragment--> satisfies the CF_HTML
- * clipboard spec so Outlook knows exactly where the pasteable content begins/ends.
- *
- * The root <div> carries explicit mso-* properties so Outlook does not override
- * the font, size, or line-height after pasting.
  */
-export function generateHTMLFragment(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation) {
-  const _innerDiv = _buildInnerDiv(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation)
+export function generateHTMLFragment(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation, salaryColumns, salaryRows) {
+  const _innerDiv = _buildInnerDiv(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation, salaryColumns, salaryRows)
   return `<!--StartFragment-->${_innerDiv}<!--EndFragment-->`
 }
 
 /**
  * generateHTML — produces a fully Outlook-compatible HTML email.
- *
- * Rules followed for Outlook compatibility:
- *  - Every style is 100% inline — no <style> blocks, no CSS classes
- *  - No CSS shorthand (e.g. font: ... or border: ...) — always explicit properties
- *  - No CSS variables
- *  - Tables use cellpadding/cellspacing/border HTML attributes (not just CSS)
- *  - Explicit font-family on every text element (Outlook strips inherited fonts)
- *  - No flexbox / grid — tables only for layout
- *  - mso-line-height-rule for Outlook line-height consistency
  */
-export function generateHTML(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation) {
-  const innerDiv = _buildInnerDiv(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation)
+export function generateHTML(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation, salaryColumns, salaryRows) {
+  const innerDiv = _buildInnerDiv(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation, salaryColumns, salaryRows)
 
   const bodyStyle = [
     'font-family: Arial, Helvetica, sans-serif',
@@ -171,24 +191,25 @@ ${innerDiv}
 }
 
 // ── Private helper — builds the inner <div> shared by both generateHTML and generateHTMLFragment ──
-// Not exported. All HTML content and inline styles live here.
-function _buildInnerDiv(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation) {
+function _buildInnerDiv(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation, salaryColumns, salaryRows) {
   const isSalary = form.researchType === 'salary'
+  const isCombined = form.researchType === 'combined'
   const role = form.role || '[Role]'
   const location = form.location || '[Location]'
   const recipientName = form.recipientName || ''
   const greeting = recipientName ? `Hi ${recipientName},` : 'Hi,'
 
-  // Content suggestion #1: editable opening line with role/location interpolated
-  const openingLine = (form.openingLine || (isSalary
-    ? 'I would like to share with you the salary benchmark research for [Role] in [Location].'
-    : 'I would like to share with you the market capacity research for [Role] in [Location].'))
+  const defaultOpeningLine = isCombined
+    ? 'I would like to share with you the market capacity and salary benchmark research for [Role] in [Location].'
+    : isSalary
+      ? 'I would like to share with you the salary benchmark research for [Role] in [Location].'
+      : 'I would like to share with you the market capacity research for [Role] in [Location].'
+
+  const openingLine = (form.openingLine || defaultOpeningLine)
     .replace('[Role]', role)
     .replace('[Location]', location)
 
   // ── Inline style constants (Outlook-safe, no shorthand) ──
-  // The wrapperStyle carries explicit mso-* properties so Outlook does not
-  // override font, size, or line-height when the fragment is pasted.
   const wrapperStyle = [
     'max-width: 750px',
     'margin-left: auto',
@@ -336,21 +357,23 @@ function _buildInnerDiv(form, columns, summaryRows, insights, effectiveMethodolo
     'color: #1a1a1a',
   ].join(';')
 
-  // ── Table HTML ──
-  const theadHtml = columns
-    .map(col => `<th style="${thStyle}">${escapeHtml(col.label || '—')}</th>`)
-    .join('')
-
-  const filledRows = getFilledRows(summaryRows, columns)
-
-  const tdEmptyStyle = tdStyle + ';color:#aaaaaa;'
-  const tbodyHtml = filledRows.length > 0
-    ? filledRows.map(row =>
-        `<tr>${columns.map(col =>
-          `<td style="${tdStyle}">${escapeHtml(row.values[col.id] || '—')}</td>`
-        ).join('')}</tr>`
-      ).join('')
-    : `<tr><td colspan="${columns.length}" style="${tdEmptyStyle}">No data</td></tr>`
+  // ── Table builder helper ──
+  function buildTableHtml(cols, rows) {
+    const theadHtml = cols.map(col => `<th style="${thStyle}">${escapeHtml(col.label || '—')}</th>`).join('')
+    const filled = getFilledRows(rows, cols)
+    const tdEmptyStyle = tdStyle + ';color:#aaaaaa;'
+    const tbodyHtml = filled.length > 0
+      ? filled.map(row =>
+          `<tr>${cols.map(col =>
+            `<td style="${tdStyle}">${escapeHtml(row.values[col.id] || '—')}</td>`
+          ).join('')}</tr>`
+        ).join('')
+      : `<tr><td colspan="${cols.length}" style="${tdEmptyStyle}">No data</td></tr>`
+    return `<table style="${tableStyle}" cellpadding="0" cellspacing="0" border="0" width="100%">
+  <thead><tr>${theadHtml}</tr></thead>
+  <tbody>${tbodyHtml}</tbody>
+</table>`
+  }
 
   // ── Insights HTML ──
   const insightItemsHtml = insights
@@ -362,47 +385,33 @@ function _buildInnerDiv(form, columns, summaryRows, insights, effectiveMethodolo
     ? `<p style="${pStyle}">${escapeHtml(form.interpretation)}</p>`
     : ''
 
-  // Handle both \n and \r\n (Windows line endings from pasted content)
   const recommendationsHtml = form.recommendations
     ? escapeHtml(form.recommendations).replace(/\r?\n/g, '<br>')
     : '[Add recommendations]'
 
-  // Content suggestion #6: closing line HTML
   const closingLineHtml = form.closingLine?.trim()
     ? `<p style="${pStyle}">${escapeHtml(form.closingLine)}</p>`
     : ''
 
-  const remarksHtml = (isSalary ? IMPORTANT_REMARKS_SALARY : IMPORTANT_REMARKS)
+  // ── Remarks ──
+  const activeRemarks = isCombined
+    ? [...IMPORTANT_REMARKS, ...IMPORTANT_REMARKS_SALARY]
+    : isSalary ? IMPORTANT_REMARKS_SALARY : IMPORTANT_REMARKS
+  const remarksHtml = activeRemarks
     .map(r => `<li style="${liStyle}">${escapeHtml(r)}</li>`)
     .join('')
 
-  // Content suggestion #5: conditional chart placeholder
-  const chartLabel = isSalary ? 'Salary range chart for visualization' : 'Bar chart / Pie chart for visualization'
-  const chartPlaceholderHtml = form.includeChartPlaceholder !== false
-    ? `\n<p style="${chartNoteStyle}">${chartLabel}</p>\n`
+  // ── Chart placeholders ──
+  const capacityChartHtml = form.includeChartPlaceholder !== false
+    ? `\n<p style="${chartNoteStyle}">Bar chart / Pie chart for visualization</p>\n`
+    : ''
+  const salaryChartHtml = form.includeChartPlaceholder !== false
+    ? `\n<p style="${chartNoteStyle}">Salary range chart for visualization</p>\n`
     : ''
 
-  const summaryHeading = isSalary ? 'Salary Benchmark Data' : 'Research Summary'
-
-  return `<div style="${wrapperStyle}">
-
-<p style="${pStyle}">${greeting}</p>
-
-<p style="${pStyle}">${escapeHtml(openingLine)}</p>
-
-<p style="${sectionHeadingStyle}">${summaryHeading}</p>
-<table style="${tableStyle}" cellpadding="0" cellspacing="0" border="0" width="100%">
-  <thead>
-    <tr>${theadHtml}</tr>
-  </thead>
-  <tbody>
-    ${tbodyHtml}
-  </tbody>
-</table>
-${chartPlaceholderHtml}
-${!isSalary ? interpretationHtml : ''}
-
-${!isSalary ? `<p style="${sectionHeadingStyle}">Key Insights</p>
+  // ── Capacity-only sections ──
+  const capacityOnlyHtml = `${interpretationHtml}
+<p style="${sectionHeadingStyle}">Key Insights</p>
 <ul style="${ulStyle}">
   ${insightItemsHtml || `<li style="${liStyle};color:#aaaaaa;">[Add key insights]</li>`}
 </ul>
@@ -415,8 +424,43 @@ ${!isSalary ? `<p style="${sectionHeadingStyle}">Key Insights</p>
   <li style="${liStyle}"><strong style="${strongStyle}">Excluded Company:</strong> EPAM</li>
   <li style="${liStyle}"><strong style="${strongStyle}">Total Years of Experience:</strong> ${escapeHtml(form.totalYearsExperience || '[Add]')}</li>
   <li style="${liStyle}"><strong style="${strongStyle}">Core Skills/Keyword:</strong> ${escapeHtml(form.coreSkills || '[Add]')}</li>
-</ul>
-` : ''}
+</ul>`
+
+  // ── Assemble body ──
+  let bodyHtml = ''
+
+  if (isCombined) {
+    bodyHtml = `
+<p style="${sectionHeadingStyle}">Research Summary</p>
+${buildTableHtml(columns, summaryRows)}
+${capacityChartHtml}
+${capacityOnlyHtml}
+
+<p style="${sectionHeadingStyle}">Salary Benchmark Data</p>
+${buildTableHtml(salaryColumns ?? [], salaryRows ?? [])}
+${salaryChartHtml}
+`
+  } else if (isSalary) {
+    bodyHtml = `
+<p style="${sectionHeadingStyle}">Salary Benchmark Data</p>
+${buildTableHtml(columns, summaryRows)}
+${salaryChartHtml}
+`
+  } else {
+    bodyHtml = `
+<p style="${sectionHeadingStyle}">Research Summary</p>
+${buildTableHtml(columns, summaryRows)}
+${capacityChartHtml}
+${capacityOnlyHtml}
+`
+  }
+
+  return `<div style="${wrapperStyle}">
+
+<p style="${pStyle}">${greeting}</p>
+
+<p style="${pStyle}">${escapeHtml(openingLine)}</p>
+${bodyHtml}
 <p style="${sectionHeadingStyle}">Recommendations</p>
 <p style="${pStyle}">${recommendationsHtml}</p>
 

@@ -24,6 +24,14 @@ export default function App() {
     addColumn,
     removeColumn,
     updateColumnLabel,
+    salaryColumns,
+    salaryRows,
+    updateSalaryCell,
+    addSalaryRow,
+    removeSalaryRow,
+    addSalaryColumn,
+    removeSalaryColumn,
+    updateSalaryColumnLabel,
     addInsight,
     removeInsight,
     updateInsight,
@@ -155,6 +163,8 @@ export default function App() {
           columns={columns}
           summaryRows={summaryRows}
           insights={insights}
+          salaryColumns={salaryColumns}
+          salaryRows={salaryRows}
           effectiveMethodologyRole={effectiveMethodologyRole}
           effectiveMethodologyLocation={effectiveMethodologyLocation}
           updateField={updateField}
@@ -164,6 +174,12 @@ export default function App() {
           addColumn={addColumn}
           removeColumn={removeColumn}
           updateColumnLabel={updateColumnLabel}
+          updateSalaryCell={updateSalaryCell}
+          addSalaryRow={addSalaryRow}
+          removeSalaryRow={removeSalaryRow}
+          addSalaryColumn={addSalaryColumn}
+          removeSalaryColumn={removeSalaryColumn}
+          updateSalaryColumnLabel={updateSalaryColumnLabel}
           addInsight={addInsight}
           removeInsight={removeInsight}
           updateInsight={updateInsight}
@@ -202,6 +218,8 @@ export default function App() {
           subject={subject}
           effectiveMethodologyRole={effectiveMethodologyRole}
           effectiveMethodologyLocation={effectiveMethodologyLocation}
+          salaryColumns={salaryColumns}
+          salaryRows={salaryRows}
           resetForm={resetForm}
         />
       </div>

@@ -5,12 +5,19 @@ import { generatePlainText, generateHTML, generateHTMLFragment, IMPORTANT_REMARK
 export const RESET_CONFIRM_MSG = 'Reset all form data? This cannot be undone.'
 
 // Detect if the form is essentially empty
-function isFormEmpty(form, summaryRows, columns, insights) {
+function isFormEmpty(form, summaryRows, columns, salaryRows, salaryColumns, insights) {
   const noHeader = !form.role && !form.location && !form.recipientName
   const noSummary = getFilledRows(summaryRows, columns).length === 0
   const noRecommendations = !form.recommendations?.trim()
   if (form.researchType === 'salary') {
     return noHeader && noSummary && noRecommendations
+  }
+  if (form.researchType === 'combined') {
+    const noSalary = getFilledRows(salaryRows, salaryColumns).length === 0
+    const noInterpretation = !form.interpretation?.trim()
+    const noInsights = !insights.some(i => i.text.trim())
+    const noMethodology = !form.totalYearsExperience && !form.coreSkills
+    return noHeader && noSummary && noSalary && noInterpretation && noInsights && noMethodology && noRecommendations
   }
   const noInterpretation = !form.interpretation?.trim()
   const noInsights = !insights.some(i => i.text.trim())
@@ -26,15 +33,14 @@ export default function EmailPreview({
   subject,
   effectiveMethodologyRole,
   effectiveMethodologyLocation,
+  salaryColumns,
+  salaryRows,
   resetForm,
 }) {
   const [toast, setToast] = useState('')
-  // Fix #5: counter key so same message re-triggers animation
   const [toastKey, setToastKey] = useState(0)
-  // Fix #10: store timer ref so we can cancel it on unmount
   const toastTimerRef = useRef(null)
 
-  // Fix #10: clean up toast timer on unmount
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
@@ -48,31 +54,23 @@ export default function EmailPreview({
     toastTimerRef.current = setTimeout(() => setToast(''), 2200)
   }
 
-  // Fix #2: added .catch() so clipboard failures surface to the user
   function copyPlainText() {
-    const text = generatePlainText(form, columns, summaryRows, insights, subject, effectiveMethodologyRole, effectiveMethodologyLocation)
+    const text = generatePlainText(form, columns, summaryRows, insights, subject, effectiveMethodologyRole, effectiveMethodologyLocation, salaryColumns, salaryRows)
     navigator.clipboard.writeText(text)
       .then(() => showToast('Copied as plain text!'))
       .catch(() => showToast('Copy failed — please copy manually.'))
   }
 
-  // Fix #2 & #3: .catch() added; Firefox fallback via execCommand when ClipboardItem unavailable
   function copyHTML() {
-    // Modern path: ClipboardItem (Chrome, Edge, Safari)
-    // Use the HTML fragment (no <html>/<head>/<body> wrappers) so Outlook's
-    // "Paste Special → Keep Source Formatting" receives a clean body fragment
-    // with CF_HTML StartFragment/EndFragment markers instead of a full document.
-    // This preserves font, size, table borders, and paragraph spacing after paste.
     if (typeof ClipboardItem !== 'undefined') {
-      const fragment = generateHTMLFragment(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation)
+      const fragment = generateHTMLFragment(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation, salaryColumns, salaryRows)
       const blob = new Blob([fragment], { type: 'text/html' })
       const item = new ClipboardItem({ 'text/html': blob })
       navigator.clipboard.write([item])
         .then(() => showToast('Copied as rich HTML!'))
         .catch(() => showToast('Copy failed — please copy manually.'))
     } else {
-      // Firefox fallback: copy full HTML source as plain text (rich copy not supported)
-      const html = generateHTML(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation)
+      const html = generateHTML(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation, salaryColumns, salaryRows)
       navigator.clipboard.writeText(html)
         .then(() => showToast('Copied as HTML source (rich copy not supported in this browser).'))
         .catch(() => showToast('Copy failed — please copy manually.'))
@@ -83,26 +81,27 @@ export default function EmailPreview({
   const location = form.location || '[Location]'
   const recipientName = form.recipientName || ''
   const isSalary = form.researchType === 'salary'
-  // Fix #6: use shared getFilledRows instead of inline filter
+  const isCombined = form.researchType === 'combined'
   const filledRows = getFilledRows(summaryRows, columns)
-  const empty = isFormEmpty(form, summaryRows, columns, insights)
-  // Fix #preview insights double-filter: compute once
+  const filledSalaryRows = getFilledRows(salaryRows ?? [], salaryColumns ?? [])
+  const empty = isFormEmpty(form, summaryRows, columns, salaryRows ?? [], salaryColumns ?? [], insights)
   const filledInsights = insights.filter(i => i.text.trim())
-  const activeRemarks = isSalary ? IMPORTANT_REMARKS_SALARY : IMPORTANT_REMARKS
-  const summaryHeading = isSalary ? 'Salary Benchmark Data' : 'Research Summary'
+  const activeRemarks = isCombined
+    ? [...IMPORTANT_REMARKS, ...IMPORTANT_REMARKS_SALARY]
+    : isSalary ? IMPORTANT_REMARKS_SALARY : IMPORTANT_REMARKS
   const chartLabel = isSalary ? 'Salary range chart for visualization' : 'Bar chart / Pie chart for visualization'
-  const defaultOpeningLine = isSalary
-    ? 'I would like to share with you the salary benchmark research for [Role] in [Location].'
-    : 'I would like to share with you the market capacity research for [Role] in [Location].'
+  const defaultOpeningLine = isCombined
+    ? 'I would like to share with you the market capacity and salary benchmark research for [Role] in [Location].'
+    : isSalary
+      ? 'I would like to share with you the salary benchmark research for [Role] in [Location].'
+      : 'I would like to share with you the market capacity research for [Role] in [Location].'
 
   return (
-    // Fix #31: owns its own .preview-panel wrapper
     <div className="preview-panel">
       {/* Sticky header with copy buttons */}
       <div className="preview-panel-header">
         <h2>Email Preview</h2>
         <div className="copy-actions">
-          {/* Fix #5: toastKey guarantees remount even with same message */}
           {toast && <span key={toastKey} className="copy-toast">{toast}</span>}
           <button
             className="btn-reset-header"
@@ -121,7 +120,6 @@ export default function EmailPreview({
             Reset Form
           </button>
           <button className="btn-copy btn-copy-plain" onClick={copyPlainText} disabled={empty}>
-            {/* Fix #22: aria-hidden on decorative SVGs */}
             <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
@@ -138,142 +136,151 @@ export default function EmailPreview({
         </div>
       </div>
 
-      {/* Email preview — always shown */}
       <div className="preview-panel-body">
-          {/* Email client header — From / To / Subject */}
-          <div className="email-client-header">
-            <div className="email-client-row">
-              <span className="email-client-label">From</span>
-              <span className="email-client-value">Market Research &lt;mr@epam.com&gt;</span>
-            </div>
-            <div className="email-client-row">
-              <span className="email-client-label">To</span>
-              <span className="email-client-value">
-                {recipientName || <span className="ep-empty-inline">[Recipient Name]</span>}
-              </span>
-            </div>
-            <div className="email-client-row email-client-subject-row">
-              <span className="email-client-label">Subject</span>
-              <span className="email-client-subject">{subject}</span>
-            </div>
+        {/* Email client header */}
+        <div className="email-client-header">
+          <div className="email-client-row">
+            <span className="email-client-label">From</span>
+            <span className="email-client-value">Market Research &lt;mr@epam.com&gt;</span>
           </div>
-
-          {/* Email body */}
-          <div className="email-preview-box">
-
-            {/* Greeting */}
-            <p className="ep-greeting">
-              Hi{recipientName ? ` ${recipientName}` : ''},
-            </p>
-            {/* Content suggestion #1: render interpolated opening line */}
-            <p className="ep-intro">
-              {(form.openingLine || defaultOpeningLine)
-                .replace('[Role]', role)
-                .replace('[Location]', location)
-              }
-            </p>
-
-            {/* Research Summary / Salary Benchmark Data */}
-            <p className="ep-section-heading">{summaryHeading}</p>
-            <div className="table-scroll-wrapper">
-              <table className="ep-table">
-                <thead>
-                  <tr>
-                    {columns.map(col => (
-                      <th key={col.id}>{col.label || '—'}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filledRows.length > 0 ? (
-                    filledRows.map(row => (
-                      <tr key={row.id}>
-                        {columns.map(col => (
-                          <td key={col.id}>{row.values[col.id] || '—'}</td>
-                        ))}
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={columns.length} className="ep-empty">
-                        No data entered yet
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Chart placeholder — content suggestion #5: conditional */}
-            {form.includeChartPlaceholder !== false && (
-              <span className="ep-chart-placeholder">{chartLabel}</span>
-            )}
-
-            {/* Interpretation — capacity only */}
-            {!isSalary && form.interpretation && (
-              <p className="ep-interpretation">{form.interpretation}</p>
-            )}
-
-            {/* Key Insights — capacity only */}
-            {!isSalary && (
-              <>
-                <p className="ep-section-heading">Key Insights</p>
-                {filledInsights.length > 0 ? (
-                  <ul className="ep-bullet-list">
-                    {filledInsights.map(item => (
-                      <li key={item.id}>{item.text}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="ep-empty">[Add key insights]</p>
-                )}
-              </>
-            )}
-
-            {/* Search Methodology — capacity only */}
-            {!isSalary && (
-              <>
-                <p className="ep-section-heading">Search Methodology</p>
-                <ul className="ep-bullet-list">
-                  <li><strong>Role:</strong> {effectiveMethodologyRole || <span className="ep-empty-inline">[Add role]</span>}</li>
-                  <li><strong>Search Platform:</strong> LinkedIn (visible profiles only)</li>
-                  <li><strong>Location:</strong> {effectiveMethodologyLocation || <span className="ep-empty-inline">[Add location]</span>}</li>
-                  <li><strong>Excluded Company:</strong> EPAM</li>
-                  <li>
-                    <strong>Total Years of Experience:</strong>{' '}
-                    {form.totalYearsExperience || <span className="ep-empty-inline">[Add]</span>}
-                  </li>
-                  <li>
-                    <strong>Core Skills/Keyword:</strong>{' '}
-                    {form.coreSkills || <span className="ep-empty-inline">[Add]</span>}
-                  </li>
-                </ul>
-              </>
-            )}
-
-            {/* Recommendations */}
-            <p className="ep-section-heading">Recommendations</p>
-            {form.recommendations ? (
-              <p className="ep-recommendations">{form.recommendations}</p>
-            ) : (
-              <p className="ep-empty">[Add recommendations]</p>
-            )}
-
-            {/* Important Remarks */}
-            <p className="ep-section-heading">Important Remarks</p>
-            <ul className="ep-bullet-list">
-              {activeRemarks.map((remark, i) => (
-                <li key={i}>{remark}</li>
-              ))}
-            </ul>
-
-            {/* Closing line — after Important Remarks */}
-            {form.closingLine?.trim() && (
-              <p className="ep-closing-line">{form.closingLine}</p>
-            )}
-
+          <div className="email-client-row">
+            <span className="email-client-label">To</span>
+            <span className="email-client-value">
+              {recipientName || <span className="ep-empty-inline">[Recipient Name]</span>}
+            </span>
+          </div>
+          <div className="email-client-row email-client-subject-row">
+            <span className="email-client-label">Subject</span>
+            <span className="email-client-subject">{subject}</span>
           </div>
         </div>
+
+        {/* Email body */}
+        <div className="email-preview-box">
+
+          <p className="ep-greeting">
+            Hi{recipientName ? ` ${recipientName}` : ''},
+          </p>
+          <p className="ep-intro">
+            {(form.openingLine || defaultOpeningLine)
+              .replace('[Role]', role)
+              .replace('[Location]', location)
+            }
+          </p>
+
+          {/* ── Capacity table (capacity + combined) ── */}
+          {!isSalary && (
+            <>
+              <p className="ep-section-heading">
+                {isCombined ? 'Research Summary' : 'Research Summary'}
+              </p>
+              <div className="table-scroll-wrapper">
+                <table className="ep-table">
+                  <thead>
+                    <tr>{columns.map(col => <th key={col.id}>{col.label || '—'}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {filledRows.length > 0 ? (
+                      filledRows.map(row => (
+                        <tr key={row.id}>
+                          {columns.map(col => <td key={col.id}>{row.values[col.id] || '—'}</td>)}
+                        </tr>
+                      ))
+                    ) : (
+                      <tr><td colSpan={columns.length} className="ep-empty">No data entered yet</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {form.includeChartPlaceholder !== false && (
+                <span className="ep-chart-placeholder">Bar chart / Pie chart for visualization</span>
+              )}
+            </>
+          )}
+
+          {/* Interpretation — capacity + combined */}
+          {!isSalary && form.interpretation && (
+            <p className="ep-interpretation">{form.interpretation}</p>
+          )}
+
+          {/* Key Insights — capacity + combined */}
+          {!isSalary && (
+            <>
+              <p className="ep-section-heading">Key Insights</p>
+              {filledInsights.length > 0 ? (
+                <ul className="ep-bullet-list">
+                  {filledInsights.map(item => <li key={item.id}>{item.text}</li>)}
+                </ul>
+              ) : (
+                <p className="ep-empty">[Add key insights]</p>
+              )}
+            </>
+          )}
+
+          {/* Search Methodology — capacity + combined */}
+          {!isSalary && (
+            <>
+              <p className="ep-section-heading">Search Methodology</p>
+              <ul className="ep-bullet-list">
+                <li><strong>Role:</strong> {effectiveMethodologyRole || <span className="ep-empty-inline">[Add role]</span>}</li>
+                <li><strong>Search Platform:</strong> LinkedIn (visible profiles only)</li>
+                <li><strong>Location:</strong> {effectiveMethodologyLocation || <span className="ep-empty-inline">[Add location]</span>}</li>
+                <li><strong>Excluded Company:</strong> EPAM</li>
+                <li><strong>Total Years of Experience:</strong>{' '}{form.totalYearsExperience || <span className="ep-empty-inline">[Add]</span>}</li>
+                <li><strong>Core Skills/Keyword:</strong>{' '}{form.coreSkills || <span className="ep-empty-inline">[Add]</span>}</li>
+              </ul>
+            </>
+          )}
+
+          {/* ── Salary table (salary + combined) ── */}
+          {(isSalary || isCombined) && (
+            <>
+              <p className="ep-section-heading">Salary Benchmark Data</p>
+              <div className="table-scroll-wrapper">
+                <table className="ep-table">
+                  <thead>
+                    <tr>{(salaryColumns ?? []).map(col => <th key={col.id}>{col.label || '—'}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {filledSalaryRows.length > 0 ? (
+                      filledSalaryRows.map(row => (
+                        <tr key={row.id}>
+                          {(salaryColumns ?? []).map(col => <td key={col.id}>{row.values[col.id] || '—'}</td>)}
+                        </tr>
+                      ))
+                    ) : (
+                      <tr><td colSpan={(salaryColumns ?? []).length} className="ep-empty">No data entered yet</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {form.includeChartPlaceholder !== false && (
+                <span className="ep-chart-placeholder">Salary range chart for visualization</span>
+              )}
+            </>
+          )}
+
+          {/* Recommendations */}
+          <p className="ep-section-heading">Recommendations</p>
+          {form.recommendations ? (
+            <p className="ep-recommendations">{form.recommendations}</p>
+          ) : (
+            <p className="ep-empty">[Add recommendations]</p>
+          )}
+
+          {/* Important Remarks — merged for combined */}
+          <p className="ep-section-heading">Important Remarks</p>
+          <ul className="ep-bullet-list">
+            {activeRemarks.map((remark, i) => <li key={i}>{remark}</li>)}
+          </ul>
+
+          {/* Closing line */}
+          {form.closingLine?.trim() && (
+            <p className="ep-closing-line">{form.closingLine}</p>
+          )}
+
+        </div>
+      </div>
     </div>
   )
 }

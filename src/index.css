@@ -42,6 +42,16 @@
   --bg-hover: rgba(255,255,255,0.06);
 }
 
+/* ── Sub-table label (combined mode) ─────────────────────────────────────── */
+.sub-table-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--epam-green);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin: 10px 0 4px;
+}
+
 /* ── Research Type Switcher ───────────────────────────────────────────────── */
 .research-type-switcher {
   margin-bottom: 12px;

@@ -19,6 +19,14 @@ const SALARY_OPENING_LINE_EXAMPLES = [
   'Here is an overview of the salary benchmark for [Role] in [Location].',
 ]
 
+const COMBINED_OPENING_LINE_EXAMPLES = [
+  'I would like to share with you the market capacity and salary benchmark research for [Role] in [Location].',
+  'As requested, here is the combined market capacity and salary benchmark research for [Role] in [Location].',
+  'Please find below the market capacity and salary benchmark research for [Role] positions in [Location].',
+  'I wanted to share the latest talent market and compensation insights for [Role] in [Location].',
+  'Here is an overview of the talent pool and salary benchmark for [Role] in [Location].',
+]
+
 const CLOSING_LINE_EXAMPLES = [
   'Please let me know if you have any questions or would like to explore additional criteria.',
   'Happy to discuss these findings further — feel free to reach out anytime.',
@@ -137,12 +145,19 @@ function ResearchTypeSwitcher({ current, onSwitch }) {
         >
           Salary Benchmark
         </button>
+        <button
+          type="button"
+          className={`btn-research-type${current === 'combined' ? ' active' : ''}`}
+          onClick={() => handleClick('combined')}
+        >
+          Combined
+        </button>
       </div>
 
       {pendingType && (
         <div className="switch-confirm">
           <span className="switch-confirm-text">
-            Switching to <strong>{pendingType === 'salary' ? 'Salary Benchmark' : 'Market Capacity'}</strong>. What about the table?
+            Switching to <strong>{pendingType === 'salary' ? 'Salary Benchmark' : pendingType === 'combined' ? 'Combined' : 'Market Capacity'}</strong>. What about the table?
           </span>
           <div className="switch-confirm-actions">
             <button type="button" className="btn-switch-reset" onClick={handleReset}>
@@ -164,26 +179,37 @@ function ResearchTypeSwitcher({ current, onSwitch }) {
 const ALL_SECTIONS = ['header', 'summary', 'interpretation', 'insights', 'methodology', 'recommendations', 'closing']
 
 // Compute how many relevant sections have content — varies by research type
-function useProgress(form, summaryRows, columns, insights) {
+function useProgress(form, summaryRows, columns, salaryRows, salaryColumns, insights) {
   return useMemo(() => {
     const isSalary = form.researchType === 'salary'
-    const filled = isSalary
+    const isCombined = form.researchType === 'combined'
+    const filled = isCombined
       ? [
-          !!(form.role || form.location || form.recipientName),
-          summaryRows.some(row => columns.some(col => row.values[col.id]?.trim())),
-          !!form.recommendations.trim(),
-        ]
-      : [
           !!(form.role || form.location || form.recipientName),
           summaryRows.some(row => columns.some(col => row.values[col.id]?.trim())),
           !!form.interpretation.trim(),
           insights.some(i => i.text.trim()),
           !!(form.totalYearsExperience || form.coreSkills),
+          salaryRows.some(row => salaryColumns.some(col => row.values[col.id]?.trim())),
           !!form.recommendations.trim(),
         ]
+      : isSalary
+        ? [
+            !!(form.role || form.location || form.recipientName),
+            summaryRows.some(row => columns.some(col => row.values[col.id]?.trim())),
+            !!form.recommendations.trim(),
+          ]
+        : [
+            !!(form.role || form.location || form.recipientName),
+            summaryRows.some(row => columns.some(col => row.values[col.id]?.trim())),
+            !!form.interpretation.trim(),
+            insights.some(i => i.text.trim()),
+            !!(form.totalYearsExperience || form.coreSkills),
+            !!form.recommendations.trim(),
+          ]
     const count = filled.filter(Boolean).length
     return { count, total: filled.length, pct: Math.round((count / filled.length) * 100) }
-  }, [form, summaryRows, columns, insights])
+  }, [form, summaryRows, columns, salaryRows, salaryColumns, insights])
 }
 
 function Section({ id, title, children, isOpen, onToggle }) {
@@ -303,6 +329,8 @@ export default function InputForm({
   columns,
   summaryRows,
   insights,
+  salaryColumns,
+  salaryRows,
   effectiveMethodologyRole,
   effectiveMethodologyLocation,
   updateField,
@@ -312,6 +340,12 @@ export default function InputForm({
   addColumn,
   removeColumn,
   updateColumnLabel,
+  updateSalaryCell,
+  addSalaryRow,
+  removeSalaryRow,
+  addSalaryColumn,
+  removeSalaryColumn,
+  updateSalaryColumnLabel,
   addInsight,
   removeInsight,
   updateInsight,
@@ -338,12 +372,13 @@ export default function InputForm({
 
   function isOpen(id) { return openSections.has(id) }
 
-  const progress = useProgress(form, summaryRows, columns, insights)
+  const progress = useProgress(form, summaryRows, columns, salaryRows, salaryColumns, insights)
 
   const isSalary = form.researchType === 'salary'
-  const openingLineExamples = isSalary ? SALARY_OPENING_LINE_EXAMPLES : CAPACITY_OPENING_LINE_EXAMPLES
-  // columnTypes only applies in salary mode — capacity table uses plain text everywhere
-  const activeColumnTypes = isSalary ? SALARY_COLUMN_TYPES : {}
+  const isCombined = form.researchType === 'combined'
+  const openingLineExamples = isCombined
+    ? COMBINED_OPENING_LINE_EXAMPLES
+    : isSalary ? SALARY_OPENING_LINE_EXAMPLES : CAPACITY_OPENING_LINE_EXAMPLES
 
   return (
     <div className="form-panel" style={style}>
@@ -420,17 +455,38 @@ export default function InputForm({
             onSwitch={switchResearchType}
           />
 
-          <ResearchSummaryTable
-            columns={columns}
-            rows={summaryRows}
-            onUpdateCell={updateSummaryCell}
-            onAddRow={addSummaryRow}
-            onRemoveRow={removeSummaryRow}
-            onAddColumn={addColumn}
-            onRemoveColumn={removeColumn}
-            onUpdateColumnLabel={updateColumnLabel}
-            columnTypes={activeColumnTypes}
-          />
+          {/* Capacity table — shown in capacity and combined modes */}
+          {(isCombined) && <p className="sub-table-label">Market Capacity</p>}
+          {(!isSalary) && (
+            <ResearchSummaryTable
+              columns={columns}
+              rows={summaryRows}
+              onUpdateCell={updateSummaryCell}
+              onAddRow={addSummaryRow}
+              onRemoveRow={removeSummaryRow}
+              onAddColumn={addColumn}
+              onRemoveColumn={removeColumn}
+              onUpdateColumnLabel={updateColumnLabel}
+              columnTypes={{}}
+            />
+          )}
+
+          {/* Salary table — shown in salary and combined modes */}
+          {isCombined && <p className="sub-table-label">Salary Benchmark</p>}
+          {(isSalary || isCombined) && (
+            <ResearchSummaryTable
+              columns={salaryColumns}
+              rows={salaryRows}
+              onUpdateCell={updateSalaryCell}
+              onAddRow={addSalaryRow}
+              onRemoveRow={removeSalaryRow}
+              onAddColumn={addSalaryColumn}
+              onRemoveColumn={removeSalaryColumn}
+              onUpdateColumnLabel={updateSalaryColumnLabel}
+              columnTypes={SALARY_COLUMN_TYPES}
+            />
+          )}
+
           {/* Content suggestion #5: chart placeholder toggle */}
           <div className="form-group chart-toggle-row">
             <label className="checkbox-label">

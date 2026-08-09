@@ -56,6 +56,7 @@ const defaultInsights = [
 // ── Default opening lines per research type ───────────────────────────────────
 export const CAPACITY_OPENING_LINE = 'I would like to share with you the market capacity research for [Role] in [Location].'
 export const SALARY_OPENING_LINE = 'I would like to share with you the salary benchmark research for [Role] in [Location].'
+export const COMBINED_OPENING_LINE = 'I would like to share with you the market capacity and salary benchmark research for [Role] in [Location].'
 
 // ── Default form ─────────────────────────────────────────────────────────────
 const defaultForm = {
@@ -118,6 +119,11 @@ function getInitialState() {
       nextColId: defaultColumns.length + 1,
       insights: defaultInsights.map(i => ({ ...i })),
       nextInsightId: defaultInsights.length + 1,
+      // salary table (used in combined mode)
+      salaryColumns: defaultSalaryColumns.map(c => ({ ...c })),
+      salaryRows: defaultSalarySummaryRows.map(r => ({ ...r, values: { ...r.values } })),
+      nextSalaryRowId: defaultSalarySummaryRows.length + 1,
+      nextSalaryColId: defaultSalaryColumns.length + 1,
     }
   }
   // Merge saved form with defaultForm so any new fields added after the user
@@ -125,6 +131,11 @@ function getInitialState() {
   return {
     ...saved,
     form: { ...defaultForm, ...saved.form },
+    // back-fill salary table for sessions saved before combined mode existed
+    salaryColumns: saved.salaryColumns ?? defaultSalaryColumns.map(c => ({ ...c })),
+    salaryRows: saved.salaryRows ?? defaultSalarySummaryRows.map(r => ({ ...r, values: { ...r.values } })),
+    nextSalaryRowId: saved.nextSalaryRowId ?? defaultSalarySummaryRows.length + 1,
+    nextSalaryColId: saved.nextSalaryColId ?? defaultSalaryColumns.length + 1,
   }
 }
 
@@ -145,25 +156,34 @@ export function useFormState() {
   const [nextColId, setNextColId] = useState(() => getInit().nextColId)
   const [insights, setInsights] = useState(() => getInit().insights)
   const [nextInsightId, setNextInsightId] = useState(() => getInit().nextInsightId)
+  // salary table — used in combined mode
+  const [salaryColumns, setSalaryColumns] = useState(() => getInit().salaryColumns)
+  const [salaryRows, setSalaryRows] = useState(() => getInit().salaryRows)
+  const [nextSalaryRowId, setNextSalaryRowId] = useState(() => getInit().nextSalaryRowId)
+  const [nextSalaryColId, setNextSalaryColId] = useState(() => getInit().nextSalaryColId)
 
   // Fix #15: debounce auto-save — only write to localStorage after SAVE_DEBOUNCE_MS of inactivity
   const saveTimerRef = useRef(null)
   useEffect(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => {
-      writeToStorage(STORAGE_KEY, { form, columns, summaryRows, nextRowId, nextColId, insights, nextInsightId })
+      writeToStorage(STORAGE_KEY, {
+        form, columns, summaryRows, nextRowId, nextColId, insights, nextInsightId,
+        salaryColumns, salaryRows, nextSalaryRowId, nextSalaryColId,
+      })
     }, SAVE_DEBOUNCE_MS)
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     }
-  }, [form, columns, summaryRows, nextRowId, nextColId, insights, nextInsightId])
+  }, [form, columns, summaryRows, nextRowId, nextColId, insights, nextInsightId,
+      salaryColumns, salaryRows, nextSalaryRowId, nextSalaryColId])
 
   // ── Form ──
   function updateField(field, value) {
     setForm(prev => ({ ...prev, [field]: value }))
   }
 
-  // ── Summary rows ──
+  // ── Capacity summary rows ──
   function updateSummaryCell(rowId, colId, value) {
     setSummaryRows(prev =>
       prev.map(row =>
@@ -187,7 +207,7 @@ export function useFormState() {
     setSummaryRows(prev => prev.filter(row => row.id !== id))
   }
 
-  // ── Columns ──
+  // ── Capacity columns ──
   function addColumn() {
     const newColId = `col${nextColId}`
     const newCol = { id: newColId, label: 'New Column' }
@@ -213,6 +233,60 @@ export function useFormState() {
 
   function updateColumnLabel(colId, label) {
     setColumns(prev =>
+      prev.map(col => (col.id === colId ? { ...col, label } : col))
+    )
+  }
+
+  // ── Salary table rows ──
+  function updateSalaryCell(rowId, colId, value) {
+    setSalaryRows(prev =>
+      prev.map(row =>
+        row.id === rowId
+          ? { ...row, values: { ...row.values, [colId]: value } }
+          : row
+      )
+    )
+  }
+
+  function addSalaryRow() {
+    setSalaryRows(prev => {
+      const colIds = Object.keys(prev[0]?.values ?? {})
+      const values = Object.fromEntries(colIds.map(id => [id, '']))
+      return [...prev, { id: nextSalaryRowId, values }]
+    })
+    setNextSalaryRowId(n => n + 1)
+  }
+
+  function removeSalaryRow(id) {
+    setSalaryRows(prev => prev.filter(row => row.id !== id))
+  }
+
+  // ── Salary columns ──
+  function addSalaryColumn() {
+    const newColId = `scol${nextSalaryColId}`
+    const newCol = { id: newColId, label: 'New Column' }
+    setSalaryColumns(prev => [...prev, newCol])
+    setSalaryRows(prev =>
+      prev.map(row => ({
+        ...row,
+        values: { ...row.values, [newColId]: '' },
+      }))
+    )
+    setNextSalaryColId(n => n + 1)
+  }
+
+  function removeSalaryColumn(colId) {
+    setSalaryColumns(prev => prev.filter(col => col.id !== colId))
+    setSalaryRows(prev =>
+      prev.map(row => {
+        const { [colId]: _, ...rest } = row.values
+        return { ...row, values: rest }
+      })
+    )
+  }
+
+  function updateSalaryColumnLabel(colId, label) {
+    setSalaryColumns(prev =>
       prev.map(col => (col.id === colId ? { ...col, label } : col))
     )
   }
@@ -267,33 +341,56 @@ export function useFormState() {
     setNextColId(defaultColumns.length + 1)
     setInsights(defaultInsights.map(i => ({ ...i })))
     setNextInsightId(defaultInsights.length + 1)
+    setSalaryColumns(defaultSalaryColumns.map(c => ({ ...c })))
+    setSalaryRows(defaultSalarySummaryRows.map(r => ({ ...r, values: { ...r.values } })))
+    setNextSalaryRowId(defaultSalarySummaryRows.length + 1)
+    setNextSalaryColId(defaultSalaryColumns.length + 1)
     removeFromStorage(STORAGE_KEY)
   }
 
   // ── Switch research type ──
-  // keepData: if true, preserve the existing table; if false, reset to the new type's defaults
+  // keepData: if true, preserve the existing table(s); if false, reset to the new type's defaults
   function switchResearchType(newType, keepData) {
-    const isSalary = newType === 'salary'
-    const newOpeningLine = isSalary ? SALARY_OPENING_LINE : CAPACITY_OPENING_LINE
-    // Only auto-update the opening line if it still matches the current type's default
-    const currentDefault = form.researchType === 'salary' ? SALARY_OPENING_LINE : CAPACITY_OPENING_LINE
+    const DEFAULT_OPENING = {
+      capacity: CAPACITY_OPENING_LINE,
+      salary: SALARY_OPENING_LINE,
+      combined: COMBINED_OPENING_LINE,
+    }
+    const currentDefault = DEFAULT_OPENING[form.researchType] ?? CAPACITY_OPENING_LINE
+    const newOpeningLine = DEFAULT_OPENING[newType] ?? CAPACITY_OPENING_LINE
     const shouldUpdateOpening = form.openingLine === currentDefault
+
     setForm(prev => ({
       ...prev,
       researchType: newType,
       ...(shouldUpdateOpening ? { openingLine: newOpeningLine } : {}),
     }))
+
     if (!keepData) {
-      const newCols = isSalary
-        ? defaultSalaryColumns.map(c => ({ ...c }))
-        : defaultColumns.map(c => ({ ...c }))
-      const newRows = isSalary
-        ? defaultSalarySummaryRows.map(r => ({ ...r, values: { ...r.values } }))
-        : defaultSummaryRows.map(r => ({ ...r, values: { ...r.values } }))
-      setColumns(newCols)
-      setSummaryRows(newRows)
-      setNextRowId(newRows.length + 1)
-      setNextColId(newCols.length + 1)
+      // For combined, reset both tables to their respective defaults.
+      // For capacity/salary single types, only reset the "primary" table (columns/summaryRows).
+      if (newType === 'combined') {
+        setColumns(defaultColumns.map(c => ({ ...c })))
+        setSummaryRows(defaultSummaryRows.map(r => ({ ...r, values: { ...r.values } })))
+        setNextRowId(defaultSummaryRows.length + 1)
+        setNextColId(defaultColumns.length + 1)
+        setSalaryColumns(defaultSalaryColumns.map(c => ({ ...c })))
+        setSalaryRows(defaultSalarySummaryRows.map(r => ({ ...r, values: { ...r.values } })))
+        setNextSalaryRowId(defaultSalarySummaryRows.length + 1)
+        setNextSalaryColId(defaultSalaryColumns.length + 1)
+      } else if (newType === 'salary') {
+        // Switching to single Salary — reset primary table to salary defaults
+        setSalaryColumns(defaultSalaryColumns.map(c => ({ ...c })))
+        setSalaryRows(defaultSalarySummaryRows.map(r => ({ ...r, values: { ...r.values } })))
+        setNextSalaryRowId(defaultSalarySummaryRows.length + 1)
+        setNextSalaryColId(defaultSalaryColumns.length + 1)
+      } else {
+        // Switching to single Capacity — reset primary table to capacity defaults
+        setColumns(defaultColumns.map(c => ({ ...c })))
+        setSummaryRows(defaultSummaryRows.map(r => ({ ...r, values: { ...r.values } })))
+        setNextRowId(defaultSummaryRows.length + 1)
+        setNextColId(defaultColumns.length + 1)
+      }
     }
   }
 
@@ -306,6 +403,10 @@ export function useFormState() {
     setNextColId(saved.nextColId ?? defaultColumns.length + 1)
     setInsights(saved.insights ?? defaultInsights.map(i => ({ ...i })))
     setNextInsightId(saved.nextInsightId ?? defaultInsights.length + 1)
+    setSalaryColumns(saved.salaryColumns ?? defaultSalaryColumns.map(c => ({ ...c })))
+    setSalaryRows(saved.salaryRows ?? defaultSalarySummaryRows.map(r => ({ ...r, values: { ...r.values } })))
+    setNextSalaryRowId(saved.nextSalaryRowId ?? defaultSalarySummaryRows.length + 1)
+    setNextSalaryColId(saved.nextSalaryColId ?? defaultSalaryColumns.length + 1)
   }
 
   // ── Templates ──
@@ -314,7 +415,10 @@ export function useFormState() {
   function saveTemplate(name) {
     if (!name.trim()) return
     const trimmedName = name.trim()
-    const snapshot = { form, columns, summaryRows, nextRowId, nextColId, insights, nextInsightId }
+    const snapshot = {
+      form, columns, summaryRows, nextRowId, nextColId, insights, nextInsightId,
+      salaryColumns, salaryRows, nextSalaryRowId, nextSalaryColId,
+    }
     setTemplates(prev => {
       const filtered = prev.filter(t => t.name !== trimmedName)
       const updated = [{ name: trimmedName, snapshot, savedAt: Date.now() }, ...filtered].slice(0, MAX_TEMPLATES)
@@ -339,7 +443,10 @@ export function useFormState() {
   // ── Computed values ──
   // Content suggestion #7: include current month + year in subject line
   const monthYear = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })
-  const reportLabel = form.researchType === 'salary' ? 'Salary Benchmark Report' : 'Market Capacity Report'
+  const reportLabel =
+    form.researchType === 'salary' ? 'Salary Benchmark Report' :
+    form.researchType === 'combined' ? 'Market Capacity & Salary Benchmark Report' :
+    'Market Capacity Report'
   const subject = `${reportLabel} – ${form.role || '[Role]'} – ${form.location || '[Location]'} – ${monthYear}`
   const effectiveMethodologyRole = form.methodologyRoleOverridden ? form.methodologyRole : form.role
   const effectiveMethodologyLocation = form.methodologyLocationOverridden ? form.methodologyLocation : form.location
@@ -359,6 +466,15 @@ export function useFormState() {
     addColumn,
     removeColumn,
     updateColumnLabel,
+    // salary table
+    salaryColumns,
+    salaryRows,
+    updateSalaryCell,
+    addSalaryRow,
+    removeSalaryRow,
+    addSalaryColumn,
+    removeSalaryColumn,
+    updateSalaryColumnLabel,
     addInsight,
     removeInsight,
     updateInsight,
