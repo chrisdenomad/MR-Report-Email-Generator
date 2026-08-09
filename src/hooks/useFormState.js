@@ -130,14 +130,21 @@ function getInitialState() {
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
 export function useFormState() {
-  // Fix #12: lazy initializer — getInitialState() runs only once, not on every render
-  const [form, setForm] = useState(() => getInitialState().form)
-  const [columns, setColumns] = useState(() => getInitialState().columns)
-  const [summaryRows, setSummaryRows] = useState(() => getInitialState().summaryRows)
-  const [nextRowId, setNextRowId] = useState(() => getInitialState().nextRowId)
-  const [nextColId, setNextColId] = useState(() => getInitialState().nextColId)
-  const [insights, setInsights] = useState(() => getInitialState().insights)
-  const [nextInsightId, setNextInsightId] = useState(() => getInitialState().nextInsightId)
+  // getInitialState() reads & parses localStorage — call it exactly once per
+  // mount by caching the result in a ref before any useState initializers run.
+  const initRef = useRef(null)
+  function getInit() {
+    if (!initRef.current) initRef.current = getInitialState()
+    return initRef.current
+  }
+
+  const [form, setForm] = useState(() => getInit().form)
+  const [columns, setColumns] = useState(() => getInit().columns)
+  const [summaryRows, setSummaryRows] = useState(() => getInit().summaryRows)
+  const [nextRowId, setNextRowId] = useState(() => getInit().nextRowId)
+  const [nextColId, setNextColId] = useState(() => getInit().nextColId)
+  const [insights, setInsights] = useState(() => getInit().insights)
+  const [nextInsightId, setNextInsightId] = useState(() => getInit().nextInsightId)
 
   // Fix #15: debounce auto-save — only write to localStorage after SAVE_DEBOUNCE_MS of inactivity
   const saveTimerRef = useRef(null)

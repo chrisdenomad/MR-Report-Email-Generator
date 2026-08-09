@@ -161,7 +161,7 @@ function ResearchTypeSwitcher({ current, onSwitch }) {
   )
 }
 
-const ALL_SECTIONS = ['header', 'summary', 'interpretation', 'insights', 'methodology', 'recommendations']
+const ALL_SECTIONS = ['header', 'summary', 'interpretation', 'insights', 'methodology', 'recommendations', 'closing']
 
 // Compute how many relevant sections have content — varies by research type
 function useProgress(form, summaryRows, columns, insights) {
@@ -568,6 +568,10 @@ export default function InputForm({
               onChange={e => updateField('recommendations', e.target.value)}
             />
           </div>
+        </Section>
+
+        {/* ── Closing Line ── */}
+        <Section id="closing" title="Closing Line" isOpen={isOpen} onToggle={toggleSection}>
           {/* Content suggestion #6: editable closing line with examples */}
           <LineFieldWithExamples
             id="field-closingLine"

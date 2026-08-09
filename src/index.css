@@ -22,6 +22,26 @@
 }
 
 
+/* ── Dark Mode ───────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg-primary: #0f1117;
+  --bg-secondary: #1a1d27;
+  --bg-panel: #1a1d27;
+  --bg-card: #22263a;
+  --bg-input: #2a2e42;
+  --border-color: #3a3f58;
+  --border-focus: #46B28E;
+  --text-primary: #e8eaf0;
+  --text-secondary: #8b8fa8;
+  --text-label: #b0b4cc;
+  --text-heading: #46B28E;
+  --danger: #f87171;
+  --shadow: 0 4px 24px rgba(0,0,0,0.45);
+  --border: #3a3f58;
+  --accent: #46B28E;
+  --bg-hover: rgba(255,255,255,0.06);
+}
+
 /* ── Research Type Switcher ───────────────────────────────────────────────── */
 .research-type-switcher {
   margin-bottom: 12px;
@@ -560,7 +580,7 @@ body {
 
 .form-group input::placeholder,
 .form-group textarea::placeholder {
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .form-group select option {
@@ -800,7 +820,7 @@ body {
 }
 
 .insight-input::placeholder {
-  color: #666;
+  color: var(--text-secondary);
 }
 
 /* Sync reset button */
@@ -869,8 +889,8 @@ body {
 /* Fix #A1: Reset button as proper CSS class */
 .btn-reset {
   background: transparent;
-  border: 1px solid #555;
-  color: #aaa;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
   border-radius: 6px;
   padding: 7px 16px;
   font-size: 12px;
@@ -991,8 +1011,8 @@ body {
 
 /* ── Email Preview Box ── */
 .email-preview-box {
-  background: #ffffff;
-  color: #1a1a1a;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
   border-radius: 0 0 8px 8px;
   border: 1px solid var(--border-color);
   border-top: none;
@@ -1019,13 +1039,13 @@ body {
 .ep-section-heading {
   font-weight: 700;
   font-size: 11px;
-  color: #2d7a5f;
+  color: var(--text-heading);
   text-transform: uppercase;
   margin: 22px 0 8px 0;
   letter-spacing: 0.6px;
   padding: 5px 8px;
-  border-left: 3px solid #46B28E;
-  background: #f0faf6;
+  border-left: 3px solid var(--epam-green);
+  background: rgba(70, 178, 142, 0.08);
   border-radius: 0 4px 4px 0;
 }
 
@@ -1037,12 +1057,12 @@ body {
 }
 
 .ep-table th {
-  background: #e8f5f0;
+  background: rgba(70, 178, 142, 0.12);
   font-weight: 700;
   padding: 7px 10px;
   text-align: left;
-  border: 1px solid #c8e6dc;
-  color: #1a4a3a;
+  border: 1px solid rgba(70, 178, 142, 0.3);
+  color: var(--text-primary);
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -1050,21 +1070,21 @@ body {
 
 .ep-table td {
   padding: 6px 10px;
-  border: 1px solid #ddeee8;
+  border: 1px solid var(--border-color);
   font-size: 13px;
 }
 
 /* Zebra striping (#3) */
 .ep-table tbody tr:nth-child(even) td {
-  background: #f5fbf8;
+  background: rgba(70, 178, 142, 0.05);
 }
 
 .ep-table tbody tr:hover td {
-  background: #e8f5f0;
+  background: rgba(70, 178, 142, 0.1);
 }
 
 .ep-chart-placeholder {
-  color: #2e9e74;
+  color: var(--epam-green);
   font-style: italic;
   text-decoration: underline;
   font-size: 13px;
@@ -1091,7 +1111,7 @@ body {
 
 /* Fix #15: split ep-empty for spans/paragraphs vs table cells */
 .ep-empty {
-  color: #aaa;
+  color: var(--text-secondary);
   font-style: italic;
   font-size: 13px;
 }
@@ -1107,7 +1127,7 @@ body {
 
 td.ep-empty {
   text-align: center;
-  color: #aaa;
+  color: var(--text-secondary);
   font-style: italic;
   font-size: 13px;
 }
