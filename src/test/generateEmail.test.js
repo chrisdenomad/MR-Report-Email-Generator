@@ -5,6 +5,7 @@ import {
   generatePlainText,
   generateHTML,
   generateHTMLFragment,
+  generateCFHTML,
   IMPORTANT_REMARKS,
   IMPORTANT_REMARKS_SALARY,
   IMPORTANT_REMARKS_COMBINED,
@@ -239,5 +240,178 @@ describe('generateHTMLFragment', () => {
   it('contains the greeting div', () => {
     const fragment = generateHTMLFragment(baseForm, columns, summaryRows, insights, 'Software Engineer', 'Warsaw', salaryColumns, salaryRows)
     expect(fragment).toContain('Hi Jane,')
+  })
+})
+
+// ── generateCFHTML ────────────────────────────────────────────────────────────
+
+describe('generateCFHTML', () => {
+  // Helper — parse a CF_HTML header line value by key
+  function parseHeader(cfHtml, key) {
+    const match = cfHtml.match(new RegExp(`^${key}:(\\d+)`, 'm'))
+    return match ? parseInt(match[1], 10) : null
+  }
+
+  it('starts with a valid CF_HTML Version header', () => {
+    const cf = generateCFHTML(baseForm, columns, summaryRows, insights, 'Software Engineer', 'Warsaw', salaryColumns, salaryRows)
+    expect(cf).toMatch(/^Version:0\.9\r\n/)
+  })
+
+  it('contains all four required CF_HTML header fields', () => {
+    const cf = generateCFHTML(baseForm, columns, summaryRows, insights, 'Software Engineer', 'Warsaw', salaryColumns, salaryRows)
+    expect(cf).toMatch(/^StartHTML:\d{10}$/m)
+    expect(cf).toMatch(/^EndHTML:\d{10}$/m)
+    expect(cf).toMatch(/^StartFragment:\d{10}$/m)
+    expect(cf).toMatch(/^EndFragment:\d{10}$/m)
+  })
+
+  it('includes the full HTML document (DOCTYPE, html, head, body tags)', () => {
+    const cf = generateCFHTML(baseForm, columns, summaryRows, insights, 'Software Engineer', 'Warsaw', salaryColumns, salaryRows)
+    expect(cf).toContain('<!DOCTYPE html>')
+    expect(cf).toContain('<html')
+    expect(cf).toContain('</html>')
+    expect(cf).toContain('<body')
+    expect(cf).toContain('</body>')
+  })
+
+  it('includes Outlook namespace declarations', () => {
+    const cf = generateCFHTML(baseForm, columns, summaryRows, insights, 'Software Engineer', 'Warsaw', salaryColumns, salaryRows)
+    expect(cf).toContain('xmlns:o="urn:schemas-microsoft-com:office:office"')
+    expect(cf).toContain('xmlns:w="urn:schemas-microsoft-com:office:word"')
+  })
+
+  it('includes the mso conditional comment block', () => {
+    const cf = generateCFHTML(baseForm, columns, summaryRows, insights, 'Software Engineer', 'Warsaw', salaryColumns, salaryRows)
+    expect(cf).toContain('<!--[if gte mso 9]>')
+    expect(cf).toContain('o:PixelsPerInch')
+  })
+
+  it('contains StartFragment and EndFragment markers inside the body', () => {
+    const cf = generateCFHTML(baseForm, columns, summaryRows, insights, 'Software Engineer', 'Warsaw', salaryColumns, salaryRows)
+    // Both markers must appear after <body and before </body>
+    const bodyStart = cf.indexOf('<body')
+    const bodyEnd = cf.lastIndexOf('</body>')
+    const sfIdx = cf.indexOf('<!--StartFragment-->')
+    const efIdx = cf.indexOf('<!--EndFragment-->')
+    expect(sfIdx).toBeGreaterThan(bodyStart)
+    expect(efIdx).toBeLessThan(bodyEnd)
+    expect(sfIdx).toBeLessThan(efIdx)
+  })
+
+  it('StartHTML offset points to the "<html" tag', () => {
+    const cf = generateCFHTML(baseForm, columns, summaryRows, insights, 'Software Engineer', 'Warsaw', salaryColumns, salaryRows)
+    const startHtml = parseHeader(cf, 'StartHTML')
+    expect(startHtml).not.toBeNull()
+    // The bytes at that offset must be "<html"
+    const enc = new TextEncoder()
+    const bytes = enc.encode(cf)
+    const charAtOffset = new TextDecoder().decode(bytes.slice(startHtml, startHtml + 5))
+    expect(charAtOffset).toBe('<html')
+  })
+
+  it('EndHTML offset equals total byte length of the CF_HTML string', () => {
+    const cf = generateCFHTML(baseForm, columns, summaryRows, insights, 'Software Engineer', 'Warsaw', salaryColumns, salaryRows)
+    const endHtml = parseHeader(cf, 'EndHTML')
+    const totalBytes = new TextEncoder().encode(cf).length
+    expect(endHtml).toBe(totalBytes)
+  })
+
+  it('StartFragment offset points to the first byte after <!--StartFragment-->', () => {
+    const cf = generateCFHTML(baseForm, columns, summaryRows, insights, 'Software Engineer', 'Warsaw', salaryColumns, salaryRows)
+    const startFrag = parseHeader(cf, 'StartFragment')
+    const enc = new TextEncoder()
+    const sfMarker = '<!--StartFragment-->'
+    const sfIdx = cf.indexOf(sfMarker)
+    const expectedOffset = enc.encode(cf.slice(0, sfIdx + sfMarker.length)).length
+    expect(startFrag).toBe(expectedOffset)
+  })
+
+  it('EndFragment offset points to the first byte of <!--EndFragment-->', () => {
+    const cf = generateCFHTML(baseForm, columns, summaryRows, insights, 'Software Engineer', 'Warsaw', salaryColumns, salaryRows)
+    const endFrag = parseHeader(cf, 'EndFragment')
+    const enc = new TextEncoder()
+    const efIdx = cf.indexOf('<!--EndFragment-->')
+    const expectedOffset = enc.encode(cf.slice(0, efIdx)).length
+    expect(endFrag).toBe(expectedOffset)
+  })
+
+  it('StartFragment < EndFragment < EndHTML', () => {
+    const cf = generateCFHTML(baseForm, columns, summaryRows, insights, 'Software Engineer', 'Warsaw', salaryColumns, salaryRows)
+    const startFrag = parseHeader(cf, 'StartFragment')
+    const endFrag   = parseHeader(cf, 'EndFragment')
+    const endHtml   = parseHeader(cf, 'EndHTML')
+    expect(startFrag).toBeLessThan(endFrag)
+    expect(endFrag).toBeLessThan(endHtml)
+  })
+
+  it('StartHTML < StartFragment', () => {
+    const cf = generateCFHTML(baseForm, columns, summaryRows, insights, 'Software Engineer', 'Warsaw', salaryColumns, salaryRows)
+    const startHtml = parseHeader(cf, 'StartHTML')
+    const startFrag = parseHeader(cf, 'StartFragment')
+    expect(startHtml).toBeLessThan(startFrag)
+  })
+
+  it('contains the email content between the fragment markers', () => {
+    const cf = generateCFHTML(baseForm, columns, summaryRows, insights, 'Software Engineer', 'Warsaw', salaryColumns, salaryRows)
+    const sfEnd = cf.indexOf('<!--StartFragment-->') + '<!--StartFragment-->'.length
+    const efStart = cf.indexOf('<!--EndFragment-->')
+    const fragment = cf.slice(sfEnd, efStart)
+    expect(fragment).toContain('Hi Jane,')
+    expect(fragment).toContain('Senior')
+    expect(fragment).toContain('Expand search to remote candidates.')
+  })
+
+  it('works correctly for salary research type', () => {
+    const salaryForm = { ...baseForm, researchType: 'salary' }
+    const cf = generateCFHTML(salaryForm, columns, summaryRows, insights, 'Software Engineer', 'Warsaw', salaryColumns, salaryRows)
+    expect(cf).toContain('Salary Benchmark Data')
+    // Byte offsets must still be valid
+    const startFrag = parseHeader(cf, 'StartFragment')
+    const endFrag   = parseHeader(cf, 'EndFragment')
+    expect(startFrag).toBeLessThan(endFrag)
+  })
+
+  it('works correctly for combined research type', () => {
+    const combinedForm = { ...baseForm, researchType: 'combined' }
+    const cf = generateCFHTML(combinedForm, columns, summaryRows, insights, 'Software Engineer', 'Warsaw', salaryColumns, salaryRows)
+    expect(cf).toContain('Market Capacity')
+    expect(cf).toContain('Salary Benchmark Data')
+    const startFrag = parseHeader(cf, 'StartFragment')
+    const endFrag   = parseHeader(cf, 'EndFragment')
+    expect(startFrag).toBeLessThan(endFrag)
+  })
+
+  it('offsets remain valid when content contains multibyte UTF-8 characters', () => {
+    // ą, ę, ó etc. are 2-byte UTF-8 characters — byte offsets must not be confused with char indices
+    const formUtf8 = { ...baseForm, role: 'Inżynier Oprogramowania', location: 'Kraków' }
+    const cf = generateCFHTML(formUtf8, columns, summaryRows, insights, 'Inżynier Oprogramowania', 'Kraków', salaryColumns, salaryRows)
+    const enc = new TextEncoder()
+    const bytes = enc.encode(cf)
+
+    const startHtml = parseHeader(cf, 'StartHTML')
+    const endHtml   = parseHeader(cf, 'EndHTML')
+    const startFrag = parseHeader(cf, 'StartFragment')
+    const endFrag   = parseHeader(cf, 'EndFragment')
+
+    // EndHTML must equal total byte length
+    expect(endHtml).toBe(bytes.length)
+
+    // StartHTML bytes must decode to "<html"
+    const atStartHtml = new TextDecoder().decode(bytes.slice(startHtml, startHtml + 5))
+    expect(atStartHtml).toBe('<html')
+
+    // Byte slice at StartFragment must be immediately after the <!--StartFragment--> marker
+    const sfMarker = '<!--StartFragment-->'
+    const sfCharIdx = cf.indexOf(sfMarker)
+    const expectedSF = enc.encode(cf.slice(0, sfCharIdx + sfMarker.length)).length
+    expect(startFrag).toBe(expectedSF)
+
+    // Byte slice at EndFragment must be at the <!--EndFragment--> marker
+    const efMarker = '<!--EndFragment-->'
+    const efCharIdx = cf.indexOf(efMarker)
+    const expectedEF = enc.encode(cf.slice(0, efCharIdx)).length
+    expect(endFrag).toBe(expectedEF)
+
+    expect(startFrag).toBeLessThan(endFrag)
   })
 })

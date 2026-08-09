@@ -155,10 +155,94 @@ export function generatePlainText(form, columns, summaryRows, insights, subject,
 
 /**
  * generateHTMLFragment — produces the inner body content only (no <html>/<head>/<body> wrappers).
+ * Kept for backwards-compatibility; use generateCFHTML for clipboard writes.
  */
 export function generateHTMLFragment(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation, salaryColumns, salaryRows) {
   const _innerDiv = _buildInnerDiv(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation, salaryColumns, salaryRows)
   return `<!--StartFragment-->${_innerDiv}<!--EndFragment-->`
+}
+
+/**
+ * generateCFHTML — produces a Windows CF_HTML clipboard payload.
+ *
+ * The CF_HTML format (https://learn.microsoft.com/en-us/windows/win32/dataxchg/html-clipboard-format)
+ * is what Outlook (and other Win32 apps) read when you paste rich HTML.
+ * It is a plain-ASCII header with zero-padded 10-digit UTF-8 byte offsets prepended
+ * to a full HTML document that contains <!--StartFragment--> / <!--EndFragment--> markers.
+ *
+ * Structure:
+ *   Version:0.9\r\n
+ *   StartHTML:XXXXXXXXXX\r\n   <- byte offset of the first char of "<html"
+ *   EndHTML:XXXXXXXXXX\r\n     <- byte offset of the char AFTER "</html>"
+ *   StartFragment:XXXXXXXXXX\r\n  <- byte offset of the first char AFTER "<!--StartFragment-->"
+ *   EndFragment:XXXXXXXXXX\r\n    <- byte offset of the first char of "<!--EndFragment-->"
+ *   <!DOCTYPE html>...full document...
+ */
+export function generateCFHTML(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation, salaryColumns, salaryRows) {
+  // 1. Build the full Outlook-compatible HTML document
+  const fullDoc = generateHTML(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation, salaryColumns, salaryRows)
+
+  // 2. Inject fragment markers just inside <body ...> and just before </body>
+  //    We inject immediately after the closing > of the <body ...> tag.
+  const bodyOpenMatch = fullDoc.match(/<body[^>]*>/)
+  if (!bodyOpenMatch) return fullDoc  // fallback: return raw HTML if structure is unexpected
+  const bodyOpenEnd = (bodyOpenMatch.index ?? 0) + bodyOpenMatch[0].length
+
+  const bodyCloseIdx = fullDoc.lastIndexOf('</body>')
+  if (bodyCloseIdx === -1) return fullDoc
+
+  const docWithMarkers =
+    fullDoc.slice(0, bodyOpenEnd) +
+    '\r\n<!--StartFragment-->' +
+    fullDoc.slice(bodyOpenEnd, bodyCloseIdx) +
+    '<!--EndFragment-->\r\n' +
+    fullDoc.slice(bodyCloseIdx)
+
+  // 3. Build a placeholder header of the exact same byte length as the real one.
+  //    All four offset values are 10-digit zero-padded integers — same width regardless of value.
+  //    We compute the header length first (using dummy offsets), then calculate real offsets.
+  const enc = new TextEncoder()
+
+  // Placeholder header — used to measure its own byte length
+  const PLACEHOLDER = '0000000000'
+  const headerTemplate = [
+    'Version:0.9\r\n',
+    `StartHTML:${PLACEHOLDER}\r\n`,
+    `EndHTML:${PLACEHOLDER}\r\n`,
+    `StartFragment:${PLACEHOLDER}\r\n`,
+    `EndFragment:${PLACEHOLDER}\r\n`,
+  ].join('')
+  const headerByteLen = enc.encode(headerTemplate).length
+
+  // 4. Compute real byte offsets (all measured from byte 0 of the full CF_HTML string)
+  const htmlTagIdx = docWithMarkers.indexOf('<html')
+  if (htmlTagIdx === -1) return fullDoc  // unexpected shape, bail out
+
+  const startHtmlByte  = headerByteLen + enc.encode(docWithMarkers.slice(0, htmlTagIdx)).length
+  const endHtmlByte    = headerByteLen + enc.encode(docWithMarkers).length  // end is AFTER last byte of doc
+
+  const sfMarker = '<!--StartFragment-->'
+  const efMarker = '<!--EndFragment-->'
+  const sfIdx = docWithMarkers.indexOf(sfMarker)
+  const efIdx = docWithMarkers.indexOf(efMarker)
+  if (sfIdx === -1 || efIdx === -1) return fullDoc
+
+  // StartFragment points to the first byte AFTER the <!--StartFragment--> comment
+  const startFragByte = headerByteLen + enc.encode(docWithMarkers.slice(0, sfIdx + sfMarker.length)).length
+  // EndFragment points to the first byte OF the <!--EndFragment--> comment
+  const endFragByte   = headerByteLen + enc.encode(docWithMarkers.slice(0, efIdx)).length
+
+  // 5. Build the real header with actual offsets, zero-padded to 10 digits
+  function pad(n) { return String(n).padStart(10, '0') }
+  const header = [
+    'Version:0.9\r\n',
+    `StartHTML:${pad(startHtmlByte)}\r\n`,
+    `EndHTML:${pad(endHtmlByte)}\r\n`,
+    `StartFragment:${pad(startFragByte)}\r\n`,
+    `EndFragment:${pad(endFragByte)}\r\n`,
+  ].join('')
+
+  return header + docWithMarkers
 }
 
 /**

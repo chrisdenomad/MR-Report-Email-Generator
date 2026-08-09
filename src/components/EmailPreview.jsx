@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { generatePlainText, generateHTML, generateHTMLFragment, IMPORTANT_REMARKS, IMPORTANT_REMARKS_SALARY, IMPORTANT_REMARKS_COMBINED, getFilledRows } from '../utils/generateEmail'
+import { generatePlainText, generateHTML, generateCFHTML, IMPORTANT_REMARKS, IMPORTANT_REMARKS_SALARY, IMPORTANT_REMARKS_COMBINED, getFilledRows } from '../utils/generateEmail'
 
 // Fix #8: shared confirm message so both reset buttons stay in sync
 export const RESET_CONFIRM_MSG = 'Reset all form data? This cannot be undone.'
@@ -76,18 +76,47 @@ export default function EmailPreview({
   }
 
   function copyHTML() {
+    const cfHtml = generateCFHTML(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation, salaryColumns, salaryRows)
+
     if (typeof ClipboardItem !== 'undefined') {
-      const fragment = generateHTMLFragment(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation, salaryColumns, salaryRows)
-      const blob = new Blob([fragment], { type: 'text/html' })
+      // Primary path: write a CF_HTML-formatted blob via the Async Clipboard API.
+      // The CF_HTML header (Version/StartHTML/EndHTML/StartFragment/EndFragment byte offsets)
+      // is required so that Outlook (a Win32 app using GetClipboardData(CF_HTML)) can parse
+      // the content correctly and preserve all formatting when pasting.
+      const blob = new Blob([cfHtml], { type: 'text/html' })
       const item = new ClipboardItem({ 'text/html': blob })
       navigator.clipboard.write([item])
         .then(() => showToast('Copied as rich HTML!'))
         .catch(() => showToast('Copy failed — please copy manually.'))
     } else {
-      const html = generateHTML(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation, salaryColumns, salaryRows)
-      navigator.clipboard.writeText(html)
-        .then(() => showToast('Copied as HTML source (rich copy not supported in this browser).'))
-        .catch(() => showToast('Copy failed — please copy manually.'))
+      // Fallback for browsers without ClipboardItem (e.g. Firefox without flag):
+      // Populate a hidden contenteditable element with the full HTML and use
+      // execCommand('copy'), which triggers the browser's own CF_HTML serializer.
+      // This is far better than writeText(rawHtml) which pastes literal markup.
+      const innerHtml = generateHTML(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation, salaryColumns, salaryRows)
+      const div = document.createElement('div')
+      div.contentEditable = 'true'
+      div.style.position = 'fixed'
+      div.style.left = '-9999px'
+      div.style.top = '0'
+      div.style.opacity = '0'
+      div.style.pointerEvents = 'none'
+      div.innerHTML = innerHtml
+      document.body.appendChild(div)
+      try {
+        const range = document.createRange()
+        range.selectNodeContents(div)
+        const sel = window.getSelection()
+        sel.removeAllRanges()
+        sel.addRange(range)
+        const ok = document.execCommand('copy')
+        sel.removeAllRanges()
+        showToast(ok ? 'Copied as rich HTML!' : 'Copy failed — please copy manually.')
+      } catch {
+        showToast('Copy failed — please copy manually.')
+      } finally {
+        document.body.removeChild(div)
+      }
     }
   }
 
