@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { generatePlainText, generateHTML, generateCFHTML, IMPORTANT_REMARKS, IMPORTANT_REMARKS_SALARY, IMPORTANT_REMARKS_COMBINED, getFilledRows } from '../utils/generateEmail'
+import { generatePlainText, generateHTML, IMPORTANT_REMARKS, IMPORTANT_REMARKS_SALARY, IMPORTANT_REMARKS_COMBINED, getFilledRows } from '../utils/generateEmail'
 
 // Fix #8: shared confirm message so both reset buttons stay in sync
 export const RESET_CONFIRM_MSG = 'Reset all form data? This cannot be undone.'
@@ -76,14 +76,14 @@ export default function EmailPreview({
   }
 
   function copyHTML() {
-    const cfHtml = generateCFHTML(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation, salaryColumns, salaryRows)
+    const html = generateHTML(form, columns, summaryRows, insights, effectiveMethodologyRole, effectiveMethodologyLocation, salaryColumns, salaryRows)
 
     if (typeof ClipboardItem !== 'undefined') {
-      // Primary path: write a CF_HTML-formatted blob via the Async Clipboard API.
-      // The CF_HTML header (Version/StartHTML/EndHTML/StartFragment/EndFragment byte offsets)
-      // is required so that Outlook (a Win32 app using GetClipboardData(CF_HTML)) can parse
-      // the content correctly and preserve all formatting when pasting.
-      const blob = new Blob([cfHtml], { type: 'text/html' })
+      // Primary path: write raw HTML via the Async Clipboard API.
+      // The browser handles CF_HTML encoding internally when writing text/html blobs —
+      // do NOT include the CF_HTML header (Version:/StartHTML:/etc.) in the blob content,
+      // or Outlook will display it as literal text instead of rendering the HTML.
+      const blob = new Blob([html], { type: 'text/html' })
       const item = new ClipboardItem({ 'text/html': blob })
       navigator.clipboard.write([item])
         .then(() => showToast('Copied as rich HTML!'))
